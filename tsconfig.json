@@ -20,6 +20,14 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@config/*": ["src/config/*"],
+      "@shared/*": ["src/shared/*"],
+      "@modules/*": ["src/modules/*"],
+      "@task/domain/*": ["src/modules/task/domain/*"],
+      "@task/application/*": ["src/modules/task/application/*"],
+      "@task/infrastructure/*": ["src/modules/task/infrastructure/*"]
+    }
   }
 }

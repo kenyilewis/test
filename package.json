@@ -27,7 +27,8 @@
     "@nestjs/swagger": "github:nestjs/swagger",
     "class-validator": "^0.14.2",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -69,6 +70,14 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@config/(.*)$": "<rootDir>/config/$1",
+      "^@shared/(.*)$": "<rootDir>/shared/$1",
+      "^@modules/(.*)$": "<rootDir>/modules/$1",
+      "^@task/domain/(.*)$": "<rootDir>/modules/task/domain/$1",
+      "^@task/application/(.*)$": "<rootDir>/modules/task/application/$1",
+      "^@task/infrastructure/(.*)$": "<rootDir>/modules/task/infrastructure/$1"
+    }
   }
 }
