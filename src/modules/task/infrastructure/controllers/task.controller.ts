@@ -16,15 +16,17 @@ import {
 
 import { GetTaskUseCase } from '@modules/task/application/use-cases/get-task.use-case';
 import { CreateTaskUseCase } from '@task/application/use-cases/create-task.use-case';
+import { ProcessImageUseCase } from '@task/application/use-cases/process-image.use-case';
 import { CreateTaskDto } from '@task/infrastructure/dtos/create-task.dto';
 import { TaskResponseDto } from '../dtos';
 import { TaskMapper } from '../mappers';
 
 @Controller('tasks')
 export class TaskController {
-  constructor(private readonly createTaskUseCase: CreateTaskUseCase,
+  constructor(
+    private readonly createTaskUseCase: CreateTaskUseCase,
     private readonly getTaskUseCase: GetTaskUseCase,
-
+    private readonly processImageUseCase: ProcessImageUseCase,
   ) {}
 
   @Post()
@@ -38,7 +40,7 @@ export class TaskController {
   @ApiResponse({
     status: 201,
     description: 'Task created successfully',
-    type: CreateTaskDto,
+    type: TaskResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -46,11 +48,15 @@ export class TaskController {
   })
   async createTask(
     @Body() dto: CreateTaskDto,
-  ): Promise<CreateTaskDto> {
+  ): Promise<TaskResponseDto> {
     const task = await this.createTaskUseCase.execute({
       imagePath: dto.imagePath,
     });
-    return dto;
+
+    this.processImageUseCase.execute(task.id, task.originalPath).catch(() => {
+    });
+
+    return TaskMapper.toResponseDto(task);
   }
 
   @Get(':taskId')
