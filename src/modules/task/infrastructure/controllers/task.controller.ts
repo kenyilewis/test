@@ -60,6 +60,7 @@ export class TaskController {
   }
 
   @Get(':taskId')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get task status and details',
     description:

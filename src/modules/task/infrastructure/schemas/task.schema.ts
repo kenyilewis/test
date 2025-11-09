@@ -9,7 +9,7 @@ export interface TaskImageDocument {
 
 @Schema({ collection: 'tasks', timestamps: true })
 export class TaskDocument extends Document {
-  @Prop({ required: true, enum: TaskStatus, index: true })
+  @Prop({ required: true, type: String, enum: TaskStatus, index: true })
   status: TaskStatus;
 
   @Prop({ required: true, type: Number })
@@ -26,7 +26,4 @@ export class TaskDocument extends Document {
 }
 
 export const TaskSchema = SchemaFactory.createForClass(TaskDocument);
-
-TaskSchema.index({ _id: 1 });
-TaskSchema.index({ status: 1 });
 

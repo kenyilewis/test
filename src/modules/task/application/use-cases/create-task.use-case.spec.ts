@@ -1,24 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
+import * as fs from 'fs/promises';
 
 import { Task } from '@task/domain/entities/task.entity';
 import { ITaskRepository } from '@task/domain/repositories/task.repository';
 import { TaskStatus } from '@task/domain/value-objects/task-status.vo';
+import { InvalidImagePathException } from '@task/domain/exceptions/invalid-image-path.exception';
 import { CreateTaskUseCase } from './create-task.use-case';
-import { ProcessImageUseCase } from './process-image.use-case';
+
+jest.mock('fs/promises');
 
 describe('CreateTaskUseCase', () => {
   let useCase: CreateTaskUseCase;
   let taskRepository: jest.Mocked<ITaskRepository>;
-  let processImageUseCase: jest.Mocked<ProcessImageUseCase>;
 
   beforeEach(async () => {
     const mockTaskRepository: Partial<jest.Mocked<ITaskRepository>> = {
       create: jest.fn(),
-    };
-
-    const mockProcessImageUseCase: Partial<jest.Mocked<ProcessImageUseCase>> = {
-      execute: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -28,16 +26,11 @@ describe('CreateTaskUseCase', () => {
           provide: 'ITaskRepository',
           useValue: mockTaskRepository,
         },
-        {
-          provide: ProcessImageUseCase,
-          useValue: mockProcessImageUseCase,
-        },
       ],
     }).compile();
 
     useCase = module.get<CreateTaskUseCase>(CreateTaskUseCase);
     taskRepository = module.get('ITaskRepository');
-    processImageUseCase = module.get(ProcessImageUseCase);
   });
 
   it('should create a task with random price between 5 and 50', async () => {
@@ -51,6 +44,7 @@ describe('CreateTaskUseCase', () => {
       [],
     );
 
+    (fs.stat as jest.Mock).mockResolvedValue({ isFile: () => true });
     taskRepository.create.mockResolvedValue(mockTask);
 
     const result = await useCase.execute({ imagePath: '/path/to/image.jpg' });
@@ -62,24 +56,14 @@ describe('CreateTaskUseCase', () => {
     expect(taskRepository.create).toHaveBeenCalled();
   });
 
-  it('should start image processing asynchronously', async () => {
-    const mockTask = new Task(
-      new Types.ObjectId().toString(),
-      TaskStatus.PENDING,
-      15.75,
-      '/path/to/image.jpg',
-      new Date(),
-      new Date(),
-      [],
-    );
+  it('should throw InvalidImagePathException for non-existent file', async () => {
+    (fs.stat as jest.Mock).mockRejectedValue(new Error('File not found'));
 
-    taskRepository.create.mockResolvedValue(mockTask);
+    await expect(
+      useCase.execute({ imagePath: '/nonexistent/path.jpg' }),
+    ).rejects.toThrow(InvalidImagePathException);
 
-    await useCase.execute({ imagePath: '/path/to/image.jpg' });
-
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    expect(processImageUseCase.execute).toHaveBeenCalled();
+    expect(taskRepository.create).not.toHaveBeenCalled();
   });
 });
 

@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: challenge-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: kratos
+    volumes:
+      - mongodb_dev_data:/data/db
+    networks:
+      - challenge-network-dev
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: challenge-app-dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      NODE_ENV: development
+      PORT: 8000
+      MONGODB_URI: mongodb://mongodb:27017/kratos
+      OUTPUT_DIR: /app/output
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./output:/app/output
+    depends_on:
+      - mongodb
+    networks:
+      - challenge-network-dev
+    command: npm run start:dev
+
+networks:
+  challenge-network-dev:
+    driver: bridge
+
+volumes:
+  mongodb_dev_data:
+

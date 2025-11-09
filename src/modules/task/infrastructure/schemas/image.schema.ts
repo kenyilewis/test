@@ -18,6 +18,3 @@ export class ImageDocument extends Document {
 
 export const ImageSchema = SchemaFactory.createForClass(ImageDocument);
 
-ImageSchema.index({ taskId: 1 });
-ImageSchema.index({ md5: 1 });
-

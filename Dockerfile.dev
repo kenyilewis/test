@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache \
+    vips-dev \
+    python3 \
+    make \
+    g++
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+RUN mkdir -p /app/output
+
+EXPOSE 8000
+
+CMD ["npm", "run", "start:dev"]
+
