@@ -1,12 +1,31 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from '@nestjs/common';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse
+} from '@nestjs/swagger';
+
+import { GetTaskUseCase } from '@modules/task/application/use-cases/get-task.use-case';
 import { CreateTaskUseCase } from '@task/application/use-cases/create-task.use-case';
 import { CreateTaskDto } from '@task/infrastructure/dtos/create-task.dto';
-import { ApiBody, ApiResponse } from '@nestjs/swagger';
-import { ApiOperation } from '@nestjs/swagger';
+import { TaskResponseDto } from '../dtos';
+import { TaskMapper } from '../mappers';
 
 @Controller('tasks')
 export class TaskController {
-  constructor(private readonly createTaskUseCase: CreateTaskUseCase) {}
+  constructor(private readonly createTaskUseCase: CreateTaskUseCase,
+    private readonly getTaskUseCase: GetTaskUseCase,
+
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -32,5 +51,30 @@ export class TaskController {
       imagePath: dto.imagePath,
     });
     return dto;
+  }
+
+  @Get(':taskId')
+  @ApiOperation({
+    summary: 'Get task status and details',
+    description:
+      'Returns the current status, price, and processed images (if completed) of a task',
+  })
+  @ApiParam({
+    name: 'taskId',
+    description: 'MongoDB ObjectId of the task',
+    example: '65d4a54b89c5e342b2c2c5f6',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Task found',
+    type: TaskResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Task not found',
+  })
+  async getTask(@Param('taskId') taskId: string): Promise<TaskResponseDto> {
+    const task = await this.getTaskUseCase.execute({ taskId });
+    return TaskMapper.toResponseDto(task);
   }
 }
