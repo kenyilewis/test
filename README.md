@@ -47,8 +47,8 @@ src/
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd challenge
+git clone https://github.com/kenyilewis/test.git
+cd test
 ```
 
 2. Build and start the application:
@@ -89,8 +89,8 @@ docker compose -f docker-compose.dev.yml logs -f app
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd challenge
+git clone https://github.com/kenyilewis/test.git
+cd test
 ```
 
 2. Install dependencies:
@@ -158,6 +158,44 @@ Once the application is running, access the Swagger documentation at:
 ```
 http://localhost:8000/api/docs
 ```
+
+### Testing with Postman
+
+A complete Postman collection is provided in the repository: `postman-collection.json`
+
+**Import the collection:**
+1. Open Postman
+2. Click "Import" button
+3. Select `postman-collection.json` from the project root
+4. The collection will be imported with all test cases and examples
+
+**Features included:**
+- ✅ 5 complete test scenarios with automatic validations
+- ✅ Pre-configured environment variables
+- ✅ Auto-save of `taskId` for testing workflow
+- ✅ Example responses for each endpoint
+- ✅ Test scripts to validate responses
+
+**Test cases:**
+1. **Create Task - Local Image**: Creates a task and validates response structure
+2. **Get Task - Pending State**: Queries a recently created task
+3. **Get Task - Completed State**: Queries a task after processing
+4. **Get Task - Not Found (404)**: Tests error handling
+5. **Create Task - Invalid Input (400)**: Tests input validation
+
+**Configuration:**
+- `baseUrl`: http://localhost:8000 (change if needed)
+- `imagePath`: https://picsum.photos/2000/1500 (default test image URL)
+- `lastTaskId`: Auto-populated after creating a task
+
+**Quick Start:**
+1. Start the application (Docker or local)
+2. Import the collection in Postman
+3. Run "Create Task" request
+4. Wait 2-3 seconds
+5. Run "Get Task - Completed State" to see processed images
+
+**Note:** The collection uses https://picsum.photos as default image source. You can change the `imagePath` variable to use local images or different URLs.
 
 ## API Endpoints
 

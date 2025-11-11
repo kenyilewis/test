@@ -1,0 +1,429 @@
+{
+  "info": {
+    "name": "Image Processing API - Challenge",
+    "_postman_id": "challenge-api-collection",
+    "description": "Colección completa para probar la API REST de procesado de imágenes.\n\n**Configuración:**\n1. La API debe estar corriendo en http://localhost:8000\n2. MongoDB debe estar disponible\n3. Importa esta colección en Postman\n4. Actualiza la variable `imagePath` con una ruta válida\n\n**Casos de Uso Incluidos:**\n- Crear tarea de procesamiento\n- Consultar estado de tarea (pending/completed)\n- Manejo de errores (404)\n- Verificar generación de precio aleatorio",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "1. Crear Tarea - Imagen Local",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta contiene taskId\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('taskId');",
+                  "    pm.expect(jsonData.taskId).to.be.a('string');",
+                  "    ",
+                  "    pm.collectionVariables.set(\"lastTaskId\", jsonData.taskId);",
+                  "});",
+                  "",
+                  "pm.test(\"Estado inicial es 'pending'\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.equal('pending');",
+                  "});",
+                  "",
+                  "pm.test(\"Precio está asignado entre 5 y 50\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('price');",
+                  "    pm.expect(jsonData.price).to.be.at.least(5);",
+                  "    pm.expect(jsonData.price).to.be.at.most(50);",
+                  "});",
+                  "",
+                  "pm.test(\"No contiene images en estado pending\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.images).to.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imagePath\": \"{{imagePath}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"]
+            },
+            "description": "Crea una nueva tarea de procesamiento de imagen.\n\n**Input:**\n- `imagePath`: Ruta local o URL de la imagen a procesar\n\n**Output:**\n- `taskId`: ID único de la tarea\n- `status`: Estado inicial (pending)\n- `price`: Precio aleatorio entre 5 y 50\n\n**Nota:** El procesamiento se ejecuta de forma asíncrona. La tarea se crea inmediatamente en estado pending."
+          },
+          "response": [
+            {
+              "name": "Respuesta exitosa",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"imagePath\": \"/path/to/image.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"taskId\": \"65d4a54b89c5e342b2c2c5f6\",\n  \"status\": \"pending\",\n  \"price\": 25.5\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Consultar Tarea - Estado Pending",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta contiene estructura correcta\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('taskId');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('price');",
+                  "});",
+                  "",
+                  "pm.test(\"Precio es consistente\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.price).to.be.at.least(5);",
+                  "    pm.expect(jsonData.price).to.be.at.most(50);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{lastTaskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{lastTaskId}}"]
+            },
+            "description": "Consulta el estado de una tarea recién creada (normalmente en estado pending).\n\n**Output (pending):**\n- `taskId`: ID de la tarea\n- `status`: pending\n- `price`: Precio asignado\n\n**Nota:** Ejecuta este request inmediatamente después de crear una tarea para verla en estado pending."
+          },
+          "response": [
+            {
+              "name": "Tarea en estado pending",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/65d4a54b89c5e342b2c2c5f6",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks", "65d4a54b89c5e342b2c2c5f6"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"taskId\": \"65d4a54b89c5e342b2c2c5f6\",\n  \"status\": \"pending\",\n  \"price\": 25.5\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Consultar Tarea - Estado Completed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Estado es 'completed'\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.equal('completed');",
+                  "});",
+                  "",
+                  "pm.test(\"Contiene array de images\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('images');",
+                  "    pm.expect(jsonData.images).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Se generaron 2 resoluciones (1024 y 800)\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.images).to.have.lengthOf(2);",
+                  "    ",
+                  "    var resolutions = jsonData.images.map(img => img.resolution);",
+                  "    pm.expect(resolutions).to.include('1024');",
+                  "    pm.expect(resolutions).to.include('800');",
+                  "});",
+                  "",
+                  "pm.test(\"Cada imagen tiene resolution y path\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    jsonData.images.forEach(function(image) {",
+                  "        pm.expect(image).to.have.property('resolution');",
+                  "        pm.expect(image).to.have.property('path');",
+                  "        pm.expect(image.path).to.include('/output/');",
+                  "        pm.expect(image.path).to.include('/' + image.resolution + '/');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{lastTaskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{lastTaskId}}"]
+            },
+            "description": "Consulta el estado de una tarea después de que ha sido procesada.\n\n**Output (completed):**\n- `taskId`: ID de la tarea\n- `status`: completed\n- `price`: Precio asignado\n- `images`: Array con las variantes generadas\n  - `resolution`: Ancho en pixels (1024 o 800)\n  - `path`: Ruta del archivo generado\n\n**Nota:** Espera unos segundos después de crear la tarea antes de ejecutar este request para ver el estado completed."
+          },
+          "response": [
+            {
+              "name": "Tarea completada con imágenes",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/65d4a54b89c5e342b2c2c5f6",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks", "65d4a54b89c5e342b2c2c5f6"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"taskId\": \"65d4a54b89c5e342b2c2c5f6\",\n  \"status\": \"completed\",\n  \"price\": 25.5,\n  \"images\": [\n    {\n      \"resolution\": \"1024\",\n      \"path\": \"/output/image1/1024/f322b730b287da77e1c519c7ffef4fc2.jpg\"\n    },\n    {\n      \"resolution\": \"800\",\n      \"path\": \"/output/image1/800/202fd8b3174a774bac24428e8cb230a1.jpg\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. Consultar Tarea - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta contiene mensaje de error\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/000000000000000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "000000000000000000000000"]
+            },
+            "description": "Intenta consultar una tarea que no existe.\n\n**Output (404):**\n- Código de estado HTTP 404\n- Mensaje de error indicando que la tarea no fue encontrada\n\n**Nota:** Este caso valida el manejo de errores de la API."
+          },
+          "response": [
+            {
+              "name": "Tarea no encontrada",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/000000000000000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks", "000000000000000000000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Task not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. Crear Tarea - Invalid Input (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta contiene mensaje de validación\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imagePath\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"]
+            },
+            "description": "Intenta crear una tarea con un imagePath vacío.\n\n**Output (400):**\n- Código de estado HTTP 400\n- Mensaje de error de validación\n\n**Nota:** Valida que la API verifica correctamente los datos de entrada."
+          },
+          "response": [
+            {
+              "name": "Validación fallida",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"imagePath\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": [\n    \"imagePath should not be empty\"\n  ],\n  \"error\": \"Bad Request\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Endpoints relacionados con la gestión de tareas de procesamiento de imágenes."
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": ["{{baseUrl}}"]
+            },
+            "description": "Verifica que la API está funcionando correctamente."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "imagePath",
+      "value": "https://picsum.photos/2000/1500",
+      "type": "string"
+    },
+    {
+      "key": "lastTaskId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
+
