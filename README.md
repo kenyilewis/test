@@ -210,6 +210,13 @@ Creates a new image processing task.
 }
 ```
 
+**Or with URL:**
+```json
+{
+  "imagePath": "https://example.com/image.jpg"
+}
+```
+
 **Response (201 Created):**
 ```json
 {
@@ -228,7 +235,25 @@ Creates a new image processing task.
 }
 ```
 
-**Note:** The API validates that the image file exists before creating the task.
+**Response (400 Bad Request) - Invalid image URL:**
+```json
+{
+  "statusCode": 400,
+  "message": "Failed to download image: Not Found",
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+**Response (400 Bad Request) - Invalid image type:**
+```json
+{
+  "statusCode": 400,
+  "message": "Invalid image file: Input buffer contains unsupported image format",
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+**Note:** The API supports both local file paths and HTTP/HTTPS URLs. It validates that the image file exists and is a valid image format before creating the task.
 
 ### GET /tasks/:taskId
 
@@ -273,15 +298,35 @@ Retrieves the status and details of a task.
 
 ## Testing
 
-The project has comprehensive test coverage with both unit and E2E tests.
+The project has comprehensive test coverage with unit, integration, and E2E tests.
 
 ### Unit Tests
 
-Run all unit tests (19 tests):
+Run all unit tests:
 
 ```bash
 npm test
 ```
+
+Unit tests cover:
+- Use cases (CreateTaskUseCase, GetTaskUseCase, ProcessImageUseCase)
+- Utility functions (price generator, MD5 hasher, path builder, image downloader, image validator)
+- URL detection and validation
+- Image format validation
+- Temporary file cleanup
+
+### Integration Tests
+
+Run integration tests with real MongoDB and Sharp:
+
+```bash
+npm run test:integration
+```
+
+Integration tests cover:
+- Use Cases + Real Repositories + MongoDB
+- Use Cases + Real Sharp Image Processor
+- End-to-end image processing flow with real services
 
 ### E2E Tests
 
@@ -291,9 +336,16 @@ Make sure MongoDB is running before executing E2E tests:
 # Start MongoDB with Docker
 docker compose up -d mongodb
 
-# Run E2E tests (6 tests)
+# Run E2E tests
 npm run test:e2e
 ```
+
+E2E tests cover:
+- Complete HTTP request/response flow
+- Local file path processing
+- URL-based image processing
+- Error handling (404, 400)
+- Invalid file type validation
 
 ### Test Coverage
 
@@ -304,25 +356,30 @@ npm run test:cov
 ### All Tests
 
 ```bash
-npm test && npm run test:e2e
+npm test && npm run test:integration && npm run test:e2e
 ```
-
-**Total Tests:** 25 tests (19 unit + 6 E2E)
 
 ## Image Processing
 
 The API processes images asynchronously:
 
-1. **Validation**: The API first validates that the image file exists
-2. **Task Creation**: When valid, a task is created and immediately returned with `status: "pending"`
-3. **Background Processing**: Image processing starts in the background (non-blocking)
-4. **Variants Generation**: Two variants are generated:
+1. **Input Support**: The API accepts both local file paths and HTTP/HTTPS URLs
+2. **Validation**: 
+   - For local paths: Validates that the file exists and is accessible
+   - For URLs: Downloads the image and validates content-type is an image
+   - Validates that the file is a valid image format using Sharp metadata extraction
+   - This prevents processing failures and provides immediate feedback
+3. **Task Creation**: When valid, a task is created and immediately returned with `status: "pending"`
+4. **Background Processing**: Image processing starts in the background (non-blocking)
+   - For URLs: The image is downloaded to a temporary location
+5. **Variants Generation**: Two variants are generated:
    - 1024px width (maintaining aspect ratio)
    - 800px width (maintaining aspect ratio)
-5. **Storage**: Images are saved in the format: `/output/{original_name}/{resolution}/{md5}.{ext}`
-6. **Status Update**: The task status is updated to `completed` or `failed`
+6. **Storage**: Images are saved in the format: `/output/{original_name}/{resolution}/{md5}.{ext}`
+7. **Cleanup**: Temporary files (from URLs) are automatically cleaned up after processing
+8. **Status Update**: The task status is updated to `completed` or `failed`
 
-**Supported formats:** JPEG, PNG, WebP, GIF, and other formats supported by Sharp.
+**Supported formats:** JPEG, PNG, WebP, GIF, TIFF, BMP, and other formats supported by Sharp.
 
 ## Database
 
@@ -383,9 +440,29 @@ The script creates:
 
 6. **Random Pricing**: Price is generated randomly between 5 and 50 units when a task is created.
 
-7. **Input Validation**: Image file existence is validated before creating tasks to prevent processing errors.
+7. **URL Support**: The API supports both local file paths and remote URLs:
+   - URLs are detected using regex pattern matching
+   - Images are downloaded to temporary storage before processing
+   - Temporary files are automatically cleaned up after processing or on failure
+   - Content-type validation ensures URLs point to actual images
 
-8. **Error Handling**: Centralized exception filters handle domain exceptions and HTTP errors consistently.
+8. **Proactive Image Validation**: Before creating tasks, the API validates:
+   - File existence (for local paths)
+   - Image format using Sharp metadata extraction
+   - This prevents processing failures and provides immediate feedback to users
+
+9. **Input Validation**: Multiple layers of validation ensure data integrity:
+   - DTO validation for request structure
+   - File existence validation
+   - Image format validation
+   - URL content-type validation
+
+10. **Error Handling**: Centralized exception filters handle domain exceptions and HTTP errors consistently.
+
+11. **Comprehensive Testing**: Three levels of testing ensure reliability:
+    - Unit tests with mocked dependencies
+    - Integration tests with real MongoDB and Sharp
+    - E2E tests covering complete HTTP flows
 
 ## Development
 

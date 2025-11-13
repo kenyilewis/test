@@ -87,10 +87,43 @@ describe('Tasks (e2e)', () => {
       expect(response.body).not.toHaveProperty('images');
     });
 
+    it('should create a task with a valid image URL', async () => {
+      const validImageUrl = 'https://via.placeholder.com/150.jpg';
+      
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .send({ imagePath: validImageUrl })
+        .expect(201);
+
+      expect(response.body).toHaveProperty('taskId');
+      expect(response.body).toHaveProperty('status', 'pending');
+      expect(response.body).toHaveProperty('price');
+      expect(response.body.price).toBeGreaterThanOrEqual(5);
+      expect(response.body.price).toBeLessThanOrEqual(50);
+    });
+
     it('should return 400 for invalid image path', async () => {
       const response = await request(app.getHttpServer())
         .post('/tasks')
         .send({ imagePath: '/nonexistent/path/image.jpg' })
+        .expect(400);
+
+      expect(response.body).toHaveProperty('statusCode', 400);
+    });
+
+    it('should return 400 for invalid URL', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .send({ imagePath: 'https://example.com/nonexistent-image-that-does-not-exist-12345.jpg' })
+        .expect(400);
+
+      expect(response.body).toHaveProperty('statusCode', 400);
+    });
+
+    it('should return 400 for non-image URL', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .send({ imagePath: 'https://example.com' })
         .expect(400);
 
       expect(response.body).toHaveProperty('statusCode', 400);
@@ -103,6 +136,20 @@ describe('Tasks (e2e)', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('statusCode');
+    });
+
+    it('should return 400 for invalid file type', async () => {
+      const txtFilePath = path.join(__dirname, '../test-images/invalid.txt');
+      await fs.writeFile(txtFilePath, 'This is not an image');
+
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .send({ imagePath: txtFilePath })
+        .expect(400);
+
+      expect(response.body).toHaveProperty('statusCode', 400);
+
+      await fs.unlink(txtFilePath);
     });
   });
 

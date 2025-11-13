@@ -7,6 +7,7 @@ import { Image } from '@task/domain/entities/image.entity';
 import { TaskImage } from '@task/domain/entities/task.entity';
 import { TaskStatus } from '@task/domain/value-objects/task-status.vo';
 import { ImageProcessingException } from '@task/domain/exceptions/image-processing.exception';
+import { isUrl, downloadImage, cleanupTempFile } from '@shared/utils';
 
 @Injectable()
 export class ProcessImageUseCase {
@@ -20,8 +21,14 @@ export class ProcessImageUseCase {
   ) {}
 
   async execute(taskId: string, imagePath: string): Promise<void> {
+    let tempFilePath: string | null = null;
+    
     try {
-      const processedImages = await this.imageProcessor.processImage(imagePath);
+      const actualImagePath = isUrl(imagePath) 
+        ? (tempFilePath = await downloadImage(imagePath))
+        : imagePath;
+
+      const processedImages = await this.imageProcessor.processImage(actualImagePath);
 
       const taskImages: TaskImage[] = [];
       const imageEntities: Image[] = [];
@@ -55,6 +62,10 @@ export class ProcessImageUseCase {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await this.taskRepository.updateStatus(taskId, TaskStatus.FAILED, errorMessage);
       throw new ImageProcessingException(errorMessage, error as Error);
+    } finally {
+      if (tempFilePath) {
+        await cleanupTempFile(tempFilePath);
+      }
     }
   }
 }

@@ -5,21 +5,29 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { ImageProcessingException } from '@task/domain/exceptions/image-processing.exception';
-import { InvalidImagePathException } from '@task/domain/exceptions/invalid-image-path.exception';
-import { TaskNotFoundException } from '@task/domain/exceptions/task-not-found.exception';
+import {
+  ImageProcessingException,
+  InvalidImagePathException,
+  TaskNotFoundException,
+  InvalidImageFormatException,
+  ImageDownloadException,
+} from '@task/domain/exceptions';
 
 @Catch(
   TaskNotFoundException,
   InvalidImagePathException,
   ImageProcessingException,
+  InvalidImageFormatException,
+  ImageDownloadException,
 )
 export class DomainExceptionFilter implements ExceptionFilter {
   catch(
     exception:
       | TaskNotFoundException
       | InvalidImagePathException
-      | ImageProcessingException,
+      | ImageProcessingException
+      | InvalidImageFormatException
+      | ImageDownloadException,
     host: ArgumentsHost,
   ) {
     const ctx = host.switchToHttp();
@@ -29,7 +37,11 @@ export class DomainExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof TaskNotFoundException) {
       status = HttpStatus.NOT_FOUND;
-    } else if (exception instanceof InvalidImagePathException) {
+    } else if (
+      exception instanceof InvalidImagePathException ||
+      exception instanceof InvalidImageFormatException ||
+      exception instanceof ImageDownloadException
+    ) {
       status = HttpStatus.BAD_REQUEST;
     } else if (exception instanceof ImageProcessingException) {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
