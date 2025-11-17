@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 
-export async function calculateMd5(buffer: Buffer): Promise<string> {
+export function calculateMd5(buffer: Buffer): string {
   return crypto.createHash('md5').update(buffer).digest('hex');
 }
 
@@ -15,4 +15,3 @@ export async function calculateMd5FromFile(filePath: string): Promise<string> {
     stream.on('error', reject);
   });
 }
-

@@ -18,4 +18,3 @@ export function extractFileName(filePath: string): string {
 export function getFileExtension(filePath: string): string {
   return path.extname(filePath);
 }
-

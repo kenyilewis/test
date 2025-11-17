@@ -7,8 +7,14 @@ import { TaskController } from '@task/infrastructure/controllers/task.controller
 import { TaskRepository } from '@task/infrastructure/repositories/task.repository';
 import { ImageRepository } from '@task/infrastructure/repositories/image.repository';
 import { SharpImageProcessorService } from '@task/infrastructure/services/sharp-image-processor.service';
-import { TaskDocument, TaskSchema } from '@task/infrastructure/schemas/task.schema';
-import { ImageDocument, ImageSchema } from '@task/infrastructure/schemas/image.schema';
+import {
+  TaskDocument,
+  TaskSchema,
+} from '@task/infrastructure/schemas/task.schema';
+import {
+  ImageDocument,
+  ImageSchema,
+} from '@task/infrastructure/schemas/image.schema';
 
 @Module({
   imports: [

@@ -9,11 +9,12 @@ import { GetTaskUseCase } from './get-task.use-case';
 
 describe('GetTaskUseCase', () => {
   let useCase: GetTaskUseCase;
-  let taskRepository: jest.Mocked<ITaskRepository>;
+  let findByIdMock: jest.Mock;
 
   beforeEach(async () => {
+    findByIdMock = jest.fn();
     const mockTaskRepository: Partial<jest.Mocked<ITaskRepository>> = {
-      findById: jest.fn(),
+      findById: findByIdMock,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -27,7 +28,6 @@ describe('GetTaskUseCase', () => {
     }).compile();
 
     useCase = module.get<GetTaskUseCase>(GetTaskUseCase);
-    taskRepository = module.get('ITaskRepository');
   });
 
   it('should return a task when it exists', async () => {
@@ -45,24 +45,23 @@ describe('GetTaskUseCase', () => {
       ],
     );
 
-    taskRepository.findById.mockResolvedValue(mockTask);
+    findByIdMock.mockResolvedValue(mockTask);
 
     const result = await useCase.execute({ taskId });
 
     expect(result).toBeDefined();
     expect(result.id).toBe(taskId);
     expect(result.status).toBe(TaskStatus.COMPLETED);
-    expect(taskRepository.findById).toHaveBeenCalledWith(taskId);
+    expect(findByIdMock).toHaveBeenCalledWith(taskId);
   });
 
   it('should throw TaskNotFoundException when task does not exist', async () => {
     const taskId = new Types.ObjectId().toString();
-    taskRepository.findById.mockResolvedValue(null);
+    findByIdMock.mockResolvedValue(null);
 
     await expect(useCase.execute({ taskId })).rejects.toThrow(
       TaskNotFoundException,
     );
-    expect(taskRepository.findById).toHaveBeenCalledWith(taskId);
+    expect(findByIdMock).toHaveBeenCalledWith(taskId);
   });
 });
-

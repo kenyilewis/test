@@ -54,11 +54,13 @@ cd test
 2. Build and start the application:
 ```bash
 # Production mode
-docker compose up -d
+docker compose up -d --build
 
 # Development mode (with hot reload)
-docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up --build
 ```
+
+> **Note:** The `--build` flag ensures images are built/rebuilt. You can omit it on subsequent runs if you haven't changed dependencies or Dockerfiles.
 
 > **Note:** If you have an older version of Docker, use `docker-compose` (with hyphen) instead of `docker compose` (with space).
 
@@ -128,12 +130,12 @@ OUTPUT_DIR=./output
 
 **Production:**
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
 **Development (with hot reload):**
 ```bash
-docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 ### Local Development
@@ -203,19 +205,55 @@ A complete Postman collection is provided in the repository: `postman-collection
 
 Creates a new image processing task.
 
-**Request Body:**
+The API supports **three methods** to provide the image:
+
+#### Method 1: File Upload (Recommended for local images)
+
+Upload an image file directly from your computer. **This works from any PC, even with Docker**.
+
+**cURL Example:**
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/tasks' \
+  -H 'accept: application/json' \
+  -F 'file=@/Users/kenyigalan/Downloads/IMG_1186.PNG'
+```
+
+**Form Data:**
+- `file`: Image file (multipart/form-data)
+
+#### Method 2: Image URL
+
+**Request Body (JSON):**
+```json
+{
+  "imagePath": "https://example.com/image.jpg"
+}
+```
+
+**cURL Example:**
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/tasks' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "imagePath": "https://picsum.photos/2000/1500"
+}'
+```
+
+#### Method 3: Local Path (Only when running locally, not with Docker)
+
+**Request Body (JSON):**
 ```json
 {
   "imagePath": "/path/to/image.jpg"
 }
 ```
 
-**Or with URL:**
-```json
-{
-  "imagePath": "https://example.com/image.jpg"
-}
-```
+**Note:** This only works if the application can access the file system path (i.e., running locally without Docker).
+
+---
 
 **Response (201 Created):**
 ```json
@@ -226,11 +264,20 @@ Creates a new image processing task.
 }
 ```
 
-**Response (400 Bad Request) - Invalid image path:**
+**Response (400 Bad Request) - No image provided:**
 ```json
 {
   "statusCode": 400,
-  "message": "Invalid image path: file does not exist",
+  "message": "Either imagePath or file must be provided",
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+**Response (400 Bad Request) - Invalid image file:**
+```json
+{
+  "statusCode": 400,
+  "message": "Only image files are allowed",
   "timestamp": "2024-01-01T12:00:00.000Z"
 }
 ```
@@ -244,7 +291,7 @@ Creates a new image processing task.
 }
 ```
 
-**Response (400 Bad Request) - Invalid image type:**
+**Response (400 Bad Request) - Invalid image format:**
 ```json
 {
   "statusCode": 400,
@@ -252,8 +299,6 @@ Creates a new image processing task.
   "timestamp": "2024-01-01T12:00:00.000Z"
 }
 ```
-
-**Note:** The API supports both local file paths and HTTP/HTTPS URLs. It validates that the image file exists and is a valid image format before creating the task.
 
 ### GET /tasks/:taskId
 
@@ -344,8 +389,10 @@ E2E tests cover:
 - Complete HTTP request/response flow
 - Local file path processing
 - URL-based image processing
+- File upload (multipart/form-data)
 - Error handling (404, 400)
 - Invalid file type validation
+- Missing file/path validation
 
 ### Test Coverage
 
@@ -361,23 +408,47 @@ npm test && npm run test:integration && npm run test:e2e
 
 ## Image Processing
 
-The API processes images asynchronously:
+The API processes images asynchronously and supports **three input methods**:
 
-1. **Input Support**: The API accepts both local file paths and HTTP/HTTPS URLs
-2. **Validation**: 
+### Input Methods
+
+1. **File Upload (multipart/form-data)**: 
+   - Works with any environment (local or Docker)
+   - File is saved to `./output/temp` with a unique UUID name
+   - Automatically cleaned up after processing
+   
+2. **HTTP/HTTPS URL**: 
+   - Downloads image to temporary location
+   - Validates content-type is an image
+   - Automatically cleaned up after processing
+
+3. **Local File Path**: 
+   - Direct access to file system
+   - Only works when application can access the path
+   - Not recommended when running with Docker (unless volumes are mounted)
+
+### Processing Flow
+
+1. **Validation**: 
+   - For file uploads: Validates MIME type during upload
    - For local paths: Validates that the file exists and is accessible
    - For URLs: Downloads the image and validates content-type is an image
    - Validates that the file is a valid image format using Sharp metadata extraction
    - This prevents processing failures and provides immediate feedback
-3. **Task Creation**: When valid, a task is created and immediately returned with `status: "pending"`
-4. **Background Processing**: Image processing starts in the background (non-blocking)
-   - For URLs: The image is downloaded to a temporary location
-5. **Variants Generation**: Two variants are generated:
+
+2. **Task Creation**: When valid, a task is created and immediately returned with `status: "pending"`
+
+3. **Background Processing**: Image processing starts in the background (non-blocking)
+
+4. **Variants Generation**: Two variants are generated:
    - 1024px width (maintaining aspect ratio)
    - 800px width (maintaining aspect ratio)
-6. **Storage**: Images are saved in the format: `/output/{original_name}/{resolution}/{md5}.{ext}`
-7. **Cleanup**: Temporary files (from URLs) are automatically cleaned up after processing
-8. **Status Update**: The task status is updated to `completed` or `failed`
+
+5. **Storage**: Images are saved in the format: `/output/{original_name}/{resolution}/{md5}.{ext}`
+
+6. **Cleanup**: Temporary files (from uploads and URLs) are automatically cleaned up after processing
+
+7. **Status Update**: The task status is updated to `completed` or `failed`
 
 **Supported formats:** JPEG, PNG, WebP, GIF, TIFF, BMP, and other formats supported by Sharp.
 

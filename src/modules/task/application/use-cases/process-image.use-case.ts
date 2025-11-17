@@ -20,15 +20,27 @@ export class ProcessImageUseCase {
     private readonly imageProcessor: IImageProcessor,
   ) {}
 
-  async execute(taskId: string, imagePath: string): Promise<void> {
+  async execute(
+    taskId: string,
+    imagePath: string,
+    isUploadedFile: boolean = false,
+  ): Promise<void> {
     let tempFilePath: string | null = null;
-    
-    try {
-      const actualImagePath = isUrl(imagePath) 
-        ? (tempFilePath = await downloadImage(imagePath))
-        : imagePath;
+    let shouldCleanup = isUploadedFile;
 
-      const processedImages = await this.imageProcessor.processImage(actualImagePath);
+    try {
+      let actualImagePath = imagePath;
+
+      if (isUrl(imagePath)) {
+        tempFilePath = await downloadImage(imagePath);
+        actualImagePath = tempFilePath;
+        shouldCleanup = true;
+      } else if (isUploadedFile) {
+        tempFilePath = imagePath;
+      }
+
+      const processedImages =
+        await this.imageProcessor.processImage(actualImagePath);
 
       const taskImages: TaskImage[] = [];
       const imageEntities: Image[] = [];
@@ -59,14 +71,18 @@ export class ProcessImageUseCase {
 
       await this.taskRepository.addImages(taskId, taskImages);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await this.taskRepository.updateStatus(taskId, TaskStatus.FAILED, errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.taskRepository.updateStatus(
+        taskId,
+        TaskStatus.FAILED,
+        errorMessage,
+      );
       throw new ImageProcessingException(errorMessage, error as Error);
     } finally {
-      if (tempFilePath) {
+      if (shouldCleanup && tempFilePath) {
         await cleanupTempFile(tempFilePath);
       }
     }
   }
 }
-

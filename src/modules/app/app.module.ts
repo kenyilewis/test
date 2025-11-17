@@ -6,10 +6,7 @@ import { AppService } from './app.service';
 import { databaseConfig } from '@config/database.config';
 
 @Module({
-  imports: [
-    MongooseModule.forRoot(databaseConfig.uri),
-    TaskModule,
-  ],
+  imports: [MongooseModule.forRoot(databaseConfig.uri), TaskModule],
   controllers: [AppController],
   providers: [AppService],
 })

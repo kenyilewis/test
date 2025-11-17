@@ -5,7 +5,7 @@ import { InvalidImageFormatException } from '@task/domain/exceptions';
 export async function validateImageFile(imagePath: string): Promise<void> {
   try {
     await fs.access(imagePath);
-    
+
     await sharp(imagePath).metadata();
   } catch (error) {
     if (error instanceof Error) {
@@ -14,4 +14,3 @@ export async function validateImageFile(imagePath: string): Promise<void> {
     throw new InvalidImageFormatException('Unable to read image metadata');
   }
 }
-

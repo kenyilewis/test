@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
 import { ITaskRepository } from '@task/domain/repositories/task.repository';
 import { IImageRepository } from '@task/domain/repositories/image.repository';
-import { IImageProcessor, ProcessedImageResult } from '@task/application/services/image-processor.interface';
+import {
+  IImageProcessor,
+  ProcessedImageResult,
+} from '@task/application/services/image-processor.interface';
 import { TaskStatus } from '@task/domain/value-objects/task-status.vo';
 import { ImageProcessingException } from '@task/domain/exceptions/image-processing.exception';
 import { ProcessImageUseCase } from './process-image.use-case';
@@ -12,22 +15,28 @@ jest.mock('@shared/utils/image-downloader.util');
 
 describe('ProcessImageUseCase', () => {
   let useCase: ProcessImageUseCase;
-  let taskRepository: jest.Mocked<ITaskRepository>;
-  let imageRepository: jest.Mocked<IImageRepository>;
-  let imageProcessor: jest.Mocked<IImageProcessor>;
+  let addImagesMock: jest.Mock;
+  let updateStatusMock: jest.Mock;
+  let createImageMock: jest.Mock;
+  let processImageMock: jest.Mock;
 
   beforeEach(async () => {
+    addImagesMock = jest.fn();
+    updateStatusMock = jest.fn();
+    createImageMock = jest.fn();
+    processImageMock = jest.fn();
+
     const mockTaskRepository: Partial<jest.Mocked<ITaskRepository>> = {
-      addImages: jest.fn(),
-      updateStatus: jest.fn(),
+      addImages: addImagesMock,
+      updateStatus: updateStatusMock,
     };
 
     const mockImageRepository: Partial<jest.Mocked<IImageRepository>> = {
-      create: jest.fn(),
+      create: createImageMock,
     };
 
     const mockImageProcessor: Partial<jest.Mocked<IImageProcessor>> = {
-      processImage: jest.fn(),
+      processImage: processImageMock,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -49,9 +58,6 @@ describe('ProcessImageUseCase', () => {
     }).compile();
 
     useCase = module.get<ProcessImageUseCase>(ProcessImageUseCase);
-    taskRepository = module.get('ITaskRepository');
-    imageRepository = module.get('IImageRepository');
-    imageProcessor = module.get('IImageProcessor');
 
     jest.clearAllMocks();
   });
@@ -77,8 +83,8 @@ describe('ProcessImageUseCase', () => {
       ];
 
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(false);
-      imageProcessor.processImage.mockResolvedValue(processedImages);
-      imageRepository.create.mockResolvedValue({
+      processImageMock.mockResolvedValue(processedImages);
+      createImageMock.mockResolvedValue({
         id: new Types.ObjectId().toString(),
         taskId,
         resolution: '1024',
@@ -90,9 +96,9 @@ describe('ProcessImageUseCase', () => {
       await useCase.execute(taskId, imagePath);
 
       expect(imageDownloader.isUrl).toHaveBeenCalledWith(imagePath);
-      expect(imageProcessor.processImage).toHaveBeenCalledWith(imagePath);
-      expect(imageRepository.create).toHaveBeenCalledTimes(2);
-      expect(taskRepository.addImages).toHaveBeenCalledWith(taskId, [
+      expect(processImageMock).toHaveBeenCalledWith(imagePath);
+      expect(createImageMock).toHaveBeenCalledTimes(2);
+      expect(addImagesMock).toHaveBeenCalledWith(taskId, [
         { resolution: '1024', path: '/output/image/1024/abc123.jpg' },
         { resolution: '800', path: '/output/image/800/def456.jpg' },
       ]);
@@ -105,19 +111,19 @@ describe('ProcessImageUseCase', () => {
       const error = new Error('Processing failed');
 
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(false);
-      imageProcessor.processImage.mockRejectedValue(error);
+      processImageMock.mockRejectedValue(error);
 
       await expect(useCase.execute(taskId, imagePath)).rejects.toThrow(
         ImageProcessingException,
       );
 
-      expect(taskRepository.updateStatus).toHaveBeenCalledWith(
+      expect(updateStatusMock).toHaveBeenCalledWith(
         taskId,
         TaskStatus.FAILED,
         'Processing failed',
       );
-      expect(imageRepository.create).not.toHaveBeenCalled();
-      expect(taskRepository.addImages).not.toHaveBeenCalled();
+      expect(createImageMock).not.toHaveBeenCalled();
+      expect(addImagesMock).not.toHaveBeenCalled();
     });
   });
 
@@ -143,10 +149,14 @@ describe('ProcessImageUseCase', () => {
       ];
 
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(true);
-      (imageDownloader.downloadImage as jest.Mock).mockResolvedValue(tempFilePath);
-      (imageDownloader.cleanupTempFile as jest.Mock).mockResolvedValue(undefined);
-      imageProcessor.processImage.mockResolvedValue(processedImages);
-      imageRepository.create.mockResolvedValue({
+      (imageDownloader.downloadImage as jest.Mock).mockResolvedValue(
+        tempFilePath,
+      );
+      (imageDownloader.cleanupTempFile as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+      processImageMock.mockResolvedValue(processedImages);
+      createImageMock.mockResolvedValue({
         id: new Types.ObjectId().toString(),
         taskId,
         resolution: '1024',
@@ -159,13 +169,15 @@ describe('ProcessImageUseCase', () => {
 
       expect(imageDownloader.isUrl).toHaveBeenCalledWith(imageUrl);
       expect(imageDownloader.downloadImage).toHaveBeenCalledWith(imageUrl);
-      expect(imageProcessor.processImage).toHaveBeenCalledWith(tempFilePath);
-      expect(imageRepository.create).toHaveBeenCalledTimes(2);
-      expect(taskRepository.addImages).toHaveBeenCalledWith(taskId, [
+      expect(processImageMock).toHaveBeenCalledWith(tempFilePath);
+      expect(createImageMock).toHaveBeenCalledTimes(2);
+      expect(addImagesMock).toHaveBeenCalledWith(taskId, [
         { resolution: '1024', path: '/output/image/1024/abc123.jpg' },
         { resolution: '800', path: '/output/image/800/def456.jpg' },
       ]);
-      expect(imageDownloader.cleanupTempFile).toHaveBeenCalledWith(tempFilePath);
+      expect(imageDownloader.cleanupTempFile).toHaveBeenCalledWith(
+        tempFilePath,
+      );
     });
 
     it('should cleanup temp file even when processing fails', async () => {
@@ -175,21 +187,27 @@ describe('ProcessImageUseCase', () => {
       const error = new Error('Processing failed');
 
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(true);
-      (imageDownloader.downloadImage as jest.Mock).mockResolvedValue(tempFilePath);
-      (imageDownloader.cleanupTempFile as jest.Mock).mockResolvedValue(undefined);
-      imageProcessor.processImage.mockRejectedValue(error);
+      (imageDownloader.downloadImage as jest.Mock).mockResolvedValue(
+        tempFilePath,
+      );
+      (imageDownloader.cleanupTempFile as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+      processImageMock.mockRejectedValue(error);
 
       await expect(useCase.execute(taskId, imageUrl)).rejects.toThrow(
         ImageProcessingException,
       );
 
       expect(imageDownloader.downloadImage).toHaveBeenCalledWith(imageUrl);
-      expect(taskRepository.updateStatus).toHaveBeenCalledWith(
+      expect(updateStatusMock).toHaveBeenCalledWith(
         taskId,
         TaskStatus.FAILED,
         'Processing failed',
       );
-      expect(imageDownloader.cleanupTempFile).toHaveBeenCalledWith(tempFilePath);
+      expect(imageDownloader.cleanupTempFile).toHaveBeenCalledWith(
+        tempFilePath,
+      );
     });
 
     it('should handle download failures', async () => {
@@ -204,12 +222,12 @@ describe('ProcessImageUseCase', () => {
         ImageProcessingException,
       );
 
-      expect(taskRepository.updateStatus).toHaveBeenCalledWith(
+      expect(updateStatusMock).toHaveBeenCalledWith(
         taskId,
         TaskStatus.FAILED,
         'Failed to download image',
       );
-      expect(imageProcessor.processImage).not.toHaveBeenCalled();
+      expect(processImageMock).not.toHaveBeenCalled();
     });
   });
 
@@ -218,17 +236,84 @@ describe('ProcessImageUseCase', () => {
     const imagePath = '/path/to/image.jpg';
 
     (imageDownloader.isUrl as jest.Mock).mockReturnValue(false);
-    imageProcessor.processImage.mockRejectedValue('Unknown error');
+    processImageMock.mockRejectedValue('Unknown error');
 
     await expect(useCase.execute(taskId, imagePath)).rejects.toThrow(
       ImageProcessingException,
     );
 
-    expect(taskRepository.updateStatus).toHaveBeenCalledWith(
+    expect(updateStatusMock).toHaveBeenCalledWith(
       taskId,
       TaskStatus.FAILED,
       'Unknown error',
     );
   });
-});
 
+  describe('Uploaded files', () => {
+    it('should process uploaded file and cleanup temp file', async () => {
+      const taskId = new Types.ObjectId().toString();
+      const uploadedFilePath = './output/temp/uploaded-image.jpg';
+
+      const processedImages: ProcessedImageResult[] = [
+        {
+          resolution: '1024',
+          path: '/output/image/1024/abc123.jpg',
+          md5: 'abc123',
+          buffer: Buffer.from('fake'),
+        },
+        {
+          resolution: '800',
+          path: '/output/image/800/def456.jpg',
+          md5: 'def456',
+          buffer: Buffer.from('fake'),
+        },
+      ];
+
+      (imageDownloader.isUrl as jest.Mock).mockReturnValue(false);
+      processImageMock.mockResolvedValue(processedImages);
+      createImageMock.mockResolvedValue({
+        id: new Types.ObjectId().toString(),
+        taskId,
+        resolution: '1024',
+        path: '/output/image/1024/abc123.jpg',
+        md5: 'abc123',
+        createdAt: new Date(),
+      });
+
+      await useCase.execute(taskId, uploadedFilePath, true);
+
+      expect(imageDownloader.isUrl).toHaveBeenCalledWith(uploadedFilePath);
+      expect(processImageMock).toHaveBeenCalledWith(uploadedFilePath);
+      expect(createImageMock).toHaveBeenCalledTimes(2);
+      expect(addImagesMock).toHaveBeenCalledWith(taskId, [
+        { resolution: '1024', path: '/output/image/1024/abc123.jpg' },
+        { resolution: '800', path: '/output/image/800/def456.jpg' },
+      ]);
+      expect(imageDownloader.cleanupTempFile).toHaveBeenCalledWith(
+        uploadedFilePath,
+      );
+    });
+
+    it('should cleanup uploaded file even when processing fails', async () => {
+      const taskId = new Types.ObjectId().toString();
+      const uploadedFilePath = './output/temp/uploaded-image.jpg';
+      const error = new Error('Processing failed');
+
+      (imageDownloader.isUrl as jest.Mock).mockReturnValue(false);
+      processImageMock.mockRejectedValue(error);
+
+      await expect(
+        useCase.execute(taskId, uploadedFilePath, true),
+      ).rejects.toThrow(ImageProcessingException);
+
+      expect(updateStatusMock).toHaveBeenCalledWith(
+        taskId,
+        TaskStatus.FAILED,
+        'Processing failed',
+      );
+      expect(imageDownloader.cleanupTempFile).toHaveBeenCalledWith(
+        uploadedFilePath,
+      );
+    });
+  });
+});

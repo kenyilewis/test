@@ -1,21 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 import { CreateTaskInput } from '@task/application/inputs/create-task.input';
 
 export class CreateTaskDto {
   @ApiProperty({
-    example: '/path/to/image.jpg',
-    description: 'Local path or URL of the image to process',
+    description:
+      'URL or local file path to the image to process. Required when using Content-Type: application/json. Not allowed when using multipart/form-data (use file upload instead).',
+    example: 'https://example.com/sample-image.jpg',
+    required: false,
+    type: String,
   })
   @IsString()
-  @IsNotEmpty()
-  imagePath: string;
+  @IsOptional()
+  imagePath?: string;
 
   public toInput(): CreateTaskInput {
     return {
-      imagePath: this.imagePath,
+      imagePath: this.imagePath!,
     };
   }
 }
-

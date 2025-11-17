@@ -20,11 +20,12 @@ jest.mock('@shared/utils/image-validator.util');
 
 describe('CreateTaskUseCase', () => {
   let useCase: CreateTaskUseCase;
-  let taskRepository: jest.Mocked<ITaskRepository>;
+  let createMock: jest.Mock;
 
   beforeEach(async () => {
+    createMock = jest.fn();
     const mockTaskRepository: Partial<jest.Mocked<ITaskRepository>> = {
-      create: jest.fn(),
+      create: createMock,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -38,7 +39,6 @@ describe('CreateTaskUseCase', () => {
     }).compile();
 
     useCase = module.get<CreateTaskUseCase>(CreateTaskUseCase);
-    taskRepository = module.get('ITaskRepository');
 
     jest.clearAllMocks();
   });
@@ -57,8 +57,10 @@ describe('CreateTaskUseCase', () => {
 
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(false);
       (fs.stat as jest.Mock).mockResolvedValue({ isFile: () => true });
-      (imageValidator.validateImageFile as jest.Mock).mockResolvedValue(undefined);
-      taskRepository.create.mockResolvedValue(mockTask);
+      (imageValidator.validateImageFile as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+      createMock.mockResolvedValue(mockTask);
 
       const result = await useCase.execute({ imagePath: '/path/to/image.jpg' });
 
@@ -66,9 +68,11 @@ describe('CreateTaskUseCase', () => {
       expect(result.status).toBe(TaskStatus.PENDING);
       expect(result.price).toBeGreaterThanOrEqual(5);
       expect(result.price).toBeLessThanOrEqual(50);
-      expect(taskRepository.create).toHaveBeenCalled();
+      expect(createMock).toHaveBeenCalled();
       expect(imageDownloader.isUrl).toHaveBeenCalledWith('/path/to/image.jpg');
-      expect(imageValidator.validateImageFile).toHaveBeenCalledWith('/path/to/image.jpg');
+      expect(imageValidator.validateImageFile).toHaveBeenCalledWith(
+        '/path/to/image.jpg',
+      );
     });
 
     it('should throw InvalidImagePathException for non-existent file', async () => {
@@ -79,7 +83,7 @@ describe('CreateTaskUseCase', () => {
         useCase.execute({ imagePath: '/nonexistent/path.jpg' }),
       ).rejects.toThrow(InvalidImagePathException);
 
-      expect(taskRepository.create).not.toHaveBeenCalled();
+      expect(createMock).not.toHaveBeenCalled();
     });
 
     it('should throw InvalidImagePathException for non-file path', async () => {
@@ -90,21 +94,23 @@ describe('CreateTaskUseCase', () => {
         useCase.execute({ imagePath: '/path/to/directory' }),
       ).rejects.toThrow(InvalidImagePathException);
 
-      expect(taskRepository.create).not.toHaveBeenCalled();
+      expect(createMock).not.toHaveBeenCalled();
     });
 
     it('should throw InvalidImageFormatException for invalid image file', async () => {
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(false);
       (fs.stat as jest.Mock).mockResolvedValue({ isFile: () => true });
       (imageValidator.validateImageFile as jest.Mock).mockRejectedValue(
-        new InvalidImageFormatException('Input buffer contains unsupported image format')
+        new InvalidImageFormatException(
+          'Input buffer contains unsupported image format',
+        ),
       );
 
       await expect(
         useCase.execute({ imagePath: '/path/to/invalid.txt' }),
       ).rejects.toThrow(InvalidImageFormatException);
 
-      expect(taskRepository.create).not.toHaveBeenCalled();
+      expect(createMock).not.toHaveBeenCalled();
     });
   });
 
@@ -121,40 +127,56 @@ describe('CreateTaskUseCase', () => {
       );
 
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(true);
-      (imageDownloader.downloadImage as jest.Mock).mockResolvedValue('/tmp/temp-image.jpg');
-      (imageValidator.validateImageFile as jest.Mock).mockResolvedValue(undefined);
+      (imageDownloader.downloadImage as jest.Mock).mockResolvedValue(
+        '/tmp/temp-image.jpg',
+      );
+      (imageValidator.validateImageFile as jest.Mock).mockResolvedValue(
+        undefined,
+      );
       (fs.unlink as jest.Mock).mockResolvedValue(undefined);
-      taskRepository.create.mockResolvedValue(mockTask);
+      createMock.mockResolvedValue(mockTask);
 
-      const result = await useCase.execute({ imagePath: 'https://example.com/image.jpg' });
+      const result = await useCase.execute({
+        imagePath: 'https://example.com/image.jpg',
+      });
 
       expect(result).toBeDefined();
       expect(result.status).toBe(TaskStatus.PENDING);
-      expect(imageDownloader.isUrl).toHaveBeenCalledWith('https://example.com/image.jpg');
-      expect(imageDownloader.downloadImage).toHaveBeenCalledWith('https://example.com/image.jpg');
-      expect(imageValidator.validateImageFile).toHaveBeenCalledWith('/tmp/temp-image.jpg');
+      expect(imageDownloader.isUrl).toHaveBeenCalledWith(
+        'https://example.com/image.jpg',
+      );
+      expect(imageDownloader.downloadImage).toHaveBeenCalledWith(
+        'https://example.com/image.jpg',
+      );
+      expect(imageValidator.validateImageFile).toHaveBeenCalledWith(
+        '/tmp/temp-image.jpg',
+      );
       expect(fs.unlink).toHaveBeenCalledWith('/tmp/temp-image.jpg');
-      expect(taskRepository.create).toHaveBeenCalled();
+      expect(createMock).toHaveBeenCalled();
     });
 
     it('should throw ImageDownloadException for invalid URL', async () => {
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(true);
       (imageDownloader.downloadImage as jest.Mock).mockRejectedValue(
-        new ImageDownloadException('Not Found')
+        new ImageDownloadException('Not Found'),
       );
 
       await expect(
         useCase.execute({ imagePath: 'https://example.com/nonexistent.jpg' }),
       ).rejects.toThrow(ImageDownloadException);
 
-      expect(taskRepository.create).not.toHaveBeenCalled();
+      expect(createMock).not.toHaveBeenCalled();
     });
 
     it('should throw InvalidImageFormatException for URL pointing to non-image', async () => {
       (imageDownloader.isUrl as jest.Mock).mockReturnValue(true);
-      (imageDownloader.downloadImage as jest.Mock).mockResolvedValue('/tmp/temp-file.html');
+      (imageDownloader.downloadImage as jest.Mock).mockResolvedValue(
+        '/tmp/temp-file.html',
+      );
       (imageValidator.validateImageFile as jest.Mock).mockRejectedValue(
-        new InvalidImageFormatException('Input buffer contains unsupported image format')
+        new InvalidImageFormatException(
+          'Input buffer contains unsupported image format',
+        ),
       );
       (fs.unlink as jest.Mock).mockResolvedValue(undefined);
 
@@ -162,8 +184,7 @@ describe('CreateTaskUseCase', () => {
         useCase.execute({ imagePath: 'https://example.com/page.html' }),
       ).rejects.toThrow(InvalidImageFormatException);
 
-      expect(taskRepository.create).not.toHaveBeenCalled();
+      expect(createMock).not.toHaveBeenCalled();
     });
   });
 });
-

@@ -3,7 +3,12 @@ import { Document, Types } from 'mongoose';
 
 @Schema({ collection: 'images', timestamps: true })
 export class ImageDocument extends Document {
-  @Prop({ type: Types.ObjectId, required: true, ref: 'TaskDocument', index: true })
+  @Prop({
+    type: Types.ObjectId,
+    required: true,
+    ref: 'TaskDocument',
+    index: true,
+  })
   taskId: Types.ObjectId;
 
   @Prop({ required: true, type: String })
@@ -17,4 +22,3 @@ export class ImageDocument extends Document {
 }
 
 export const ImageSchema = SchemaFactory.createForClass(ImageDocument);
-

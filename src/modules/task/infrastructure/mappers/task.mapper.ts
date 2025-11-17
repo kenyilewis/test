@@ -1,5 +1,5 @@
 import { Task } from '@task/domain/entities/task.entity';
-import { TaskResponseDto, ImageResponseDto } from '@task/infrastructure/dtos';
+import { TaskResponseDto } from '@task/infrastructure/dtos';
 
 export class TaskMapper {
   static toResponseDto(task: Task): TaskResponseDto {
@@ -16,7 +16,10 @@ export class TaskMapper {
       }));
     }
 
+    if (task.isFailed() && task.error) {
+      dto.error = task.error;
+    }
+
     return dto;
   }
 }
-

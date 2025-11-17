@@ -4,4 +4,3 @@ export class InvalidImagePathException extends Error {
     this.name = 'InvalidImagePathException';
   }
 }
-

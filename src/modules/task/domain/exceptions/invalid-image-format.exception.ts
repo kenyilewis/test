@@ -4,4 +4,3 @@ export class InvalidImageFormatException extends Error {
     this.name = 'InvalidImageFormatException';
   }
 }
-

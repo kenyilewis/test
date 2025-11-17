@@ -16,14 +16,13 @@ async function main() {
     }),
   );
 
-  app.useGlobalFilters(
-    new DomainExceptionFilter(),
-    new HttpExceptionFilter(),
-  );
+  app.useGlobalFilters(new DomainExceptionFilter(), new HttpExceptionFilter());
 
   const config = new DocumentBuilder()
     .setTitle('Image Processing API')
-    .setDescription('API REST for image processing and task management. Processes images to generate variants at specific resolutions (1024px and 800px width) and manages task status with associated pricing.')
+    .setDescription(
+      'API REST for image processing and task management. Processes images to generate variants at specific resolutions (1024px and 800px width) and manages task status with associated pricing.',
+    )
     .setVersion('1.0')
     .addTag('tasks', 'Image processing tasks management')
     .build();
@@ -33,7 +32,9 @@ async function main() {
 
   await app.listen(appConfig.port);
   console.log(`Server is running on port ${appConfig.port}`);
-  console.log(`Swagger documentation available at http://localhost:${appConfig.port}/api/docs`);
+  console.log(
+    `Swagger documentation available at http://localhost:${appConfig.port}/api/docs`,
+  );
 }
 
 main().catch((error) => {

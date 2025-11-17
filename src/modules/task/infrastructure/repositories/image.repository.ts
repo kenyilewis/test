@@ -5,6 +5,16 @@ import { Image } from '@task/domain/entities/image.entity';
 import { IImageRepository } from '@task/domain/repositories/image.repository';
 import { ImageDocument } from '../schemas/image.schema';
 
+type ImageDocumentObject = {
+  _id: Types.ObjectId;
+  taskId: Types.ObjectId;
+  resolution: string;
+  path: string;
+  md5: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
 @Injectable()
 export class ImageRepository implements IImageRepository {
   constructor(
@@ -40,9 +50,9 @@ export class ImageRepository implements IImageRepository {
   }
 
   private toDomainEntity(doc: ImageDocument): Image {
-    const docObj = doc.toObject();
-    const id = (doc._id as any).toString();
-    const taskId = (docObj.taskId as any).toString();
+    const docObj = doc.toObject() as ImageDocumentObject;
+    const id = docObj._id.toString();
+    const taskId = docObj.taskId.toString();
     return new Image(
       id,
       taskId,
@@ -53,4 +63,3 @@ export class ImageRepository implements IImageRepository {
     );
   }
 }
-

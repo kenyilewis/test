@@ -4,4 +4,3 @@ export class ImageDownloadException extends Error {
     this.name = 'ImageDownloadException';
   }
 }
-

@@ -4,4 +4,3 @@ export function generateRandomPrice(): number {
   const price = Math.random() * (max - min) + min;
   return Math.round(price * 100) / 100;
 }
-

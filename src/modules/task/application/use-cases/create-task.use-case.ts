@@ -46,7 +46,9 @@ export class CreateTaskUseCase {
       } else {
         const stats = await fs.stat(imagePath);
         if (!stats.isFile()) {
-          throw new InvalidImagePathException('The provided path is not a file');
+          throw new InvalidImagePathException(
+            'The provided path is not a file',
+          );
         }
         await validateImageFile(imagePath);
       }
@@ -59,7 +61,8 @@ export class CreateTaskUseCase {
         throw error;
       }
 
-      const message = error instanceof Error ? error.message : 'Invalid image path or URL';
+      const message =
+        error instanceof Error ? error.message : 'Invalid image path or URL';
       throw new InvalidImagePathException(message);
     }
   }

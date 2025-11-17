@@ -27,7 +27,11 @@ export class TaskResponseDto {
     required: false,
   })
   images?: ImageResponseDto[];
+
+  @ApiProperty({
+    example: 'Image processing failed: File not found',
+    description: 'Error message (only when status is failed)',
+    required: false,
+  })
+  error?: string;
 }
-
-
-

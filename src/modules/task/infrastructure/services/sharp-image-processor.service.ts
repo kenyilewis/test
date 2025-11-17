@@ -25,7 +25,7 @@ export class SharpImageProcessorService implements IImageProcessor {
 
     for (const resolution of this.resolutions) {
       const buffer = await this.resizeImage(imagePath, resolution);
-      const md5 = await calculateMd5(buffer);
+      const md5 = calculateMd5(buffer);
 
       const outputPath = buildImageOutputPath(
         appConfig.outputDir,
@@ -49,15 +49,13 @@ export class SharpImageProcessorService implements IImageProcessor {
     return results;
   }
 
-  private async resizeImage(
-    imagePath: string,
-    width: number,
-  ): Promise<Buffer> {
-    return await sharp(imagePath).resize(width, null, { fit: 'inside' }).toBuffer();
+  private async resizeImage(imagePath: string, width: number): Promise<Buffer> {
+    return await sharp(imagePath)
+      .resize(width, null, { fit: 'inside' })
+      .toBuffer();
   }
 
   private async ensureDirectoryExists(dirPath: string): Promise<void> {
     await fs.mkdir(dirPath, { recursive: true });
   }
 }
-

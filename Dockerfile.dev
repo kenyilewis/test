@@ -11,9 +11,9 @@ RUN apk add --no-cache \
 COPY package*.json ./
 RUN npm install
 
-COPY . .
-
 RUN mkdir -p /app/output
+
+COPY . .
 
 EXPOSE 8000
 

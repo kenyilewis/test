@@ -26,4 +26,3 @@ export class TaskDocument extends Document {
 }
 
 export const TaskSchema = SchemaFactory.createForClass(TaskDocument);
-

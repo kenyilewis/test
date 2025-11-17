@@ -10,7 +10,7 @@ export function isUrl(imagePath: string): boolean {
 
 export async function downloadImage(url: string): Promise<string> {
   const response = await fetch(url);
-  
+
   if (!response.ok) {
     throw new ImageDownloadException(response.statusText);
   }
@@ -21,23 +21,23 @@ export async function downloadImage(url: string): Promise<string> {
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
-  
+
   const tempDir = path.join(appConfig.outputDir, 'temp');
   await fs.mkdir(tempDir, { recursive: true });
-  
+
   const randomName = crypto.randomBytes(16).toString('hex');
   const extension = getExtensionFromContentType(contentType) || '.jpg';
   const tempFilePath = path.join(tempDir, `${randomName}${extension}`);
-  
+
   await fs.writeFile(tempFilePath, buffer);
-  
+
   return tempFilePath;
 }
 
 export async function cleanupTempFile(filePath: string): Promise<void> {
   try {
     await fs.unlink(filePath);
-  } catch (error) {
+  } catch {
     // Ignore errors during cleanup
   }
 }
@@ -51,7 +51,6 @@ function getExtensionFromContentType(contentType: string): string | null {
     'image/tiff': '.tiff',
     'image/bmp': '.bmp',
   };
-  
+
   return mimeToExt[contentType] || null;
 }
-

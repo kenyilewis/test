@@ -7,4 +7,3 @@ export interface ITaskRepository {
   updateStatus(id: string, status: TaskStatus, error?: string): Promise<void>;
   addImages(id: string, images: TaskImage[]): Promise<void>;
 }
-

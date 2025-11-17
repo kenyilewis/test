@@ -5,4 +5,3 @@ export interface IImageRepository {
   findByTaskId(taskId: string): Promise<Image[]>;
   findByMd5(md5: string): Promise<Image | null>;
 }
-

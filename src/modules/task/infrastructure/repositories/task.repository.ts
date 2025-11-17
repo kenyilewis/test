@@ -1,10 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types, UpdateQuery } from 'mongoose';
 import { Task, TaskImage } from '@task/domain/entities/task.entity';
 import { ITaskRepository } from '@task/domain/repositories';
 import { TaskStatus } from '@task/domain/value-objects/task-status.vo';
-import { TaskDocument } from '../schemas/task.schema';
+import { TaskDocument, TaskImageDocument } from '../schemas/task.schema';
+
+type TaskDocumentObject = {
+  _id: Types.ObjectId;
+  status: TaskStatus;
+  price: number;
+  originalPath: string;
+  images: TaskImageDocument[];
+  error?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+type TaskStatusUpdate = {
+  status: TaskStatus;
+  error?: string;
+};
 
 @Injectable()
 export class TaskRepository implements ITaskRepository {
@@ -34,12 +50,17 @@ export class TaskRepository implements ITaskRepository {
     return this.toDomainEntity(taskDoc);
   }
 
-  async updateStatus(id: string, status: TaskStatus, error?: string): Promise<void> {
-    const update: any = { status };
+  async updateStatus(
+    id: string,
+    status: TaskStatus,
+    error?: string,
+  ): Promise<void> {
+    const update: TaskStatusUpdate = { status };
     if (error) {
       update.error = error;
     }
-    await this.taskModel.updateOne({ _id: id }, update).exec();
+    const updateQuery: UpdateQuery<TaskDocument> = update;
+    await this.taskModel.updateOne({ _id: id }, updateQuery).exec();
   }
 
   async addImages(id: string, images: TaskImage[]): Promise<void> {
@@ -57,8 +78,8 @@ export class TaskRepository implements ITaskRepository {
   }
 
   private toDomainEntity(doc: TaskDocument): Task {
-    const docObj = doc.toObject();
-    const id = (doc._id as any).toString();
+    const docObj = doc.toObject() as TaskDocumentObject;
+    const id = docObj._id.toString();
     return new Task(
       id,
       docObj.status,

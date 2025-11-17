@@ -41,4 +41,3 @@ export class Task {
     return this.status === TaskStatus.FAILED;
   }
 }
-

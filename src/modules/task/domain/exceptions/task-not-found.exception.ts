@@ -4,4 +4,3 @@ export class TaskNotFoundException extends Error {
     this.name = 'TaskNotFoundException';
   }
 }
-

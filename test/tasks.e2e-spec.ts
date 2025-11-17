@@ -1,12 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/modules/app/app.module';
-import { DomainExceptionFilter, HttpExceptionFilter } from '../src/shared/filters';
+import {
+  DomainExceptionFilter,
+  HttpExceptionFilter,
+} from '../src/shared/filters';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
+type TaskResponse = {
+  taskId: string;
+  status: string;
+  price: number;
+  images?: Array<{ resolution: string; path: string }>;
+  error?: string;
+};
+
+type ErrorResponse = {
+  statusCode: number;
+  message?: string;
+};
 
 describe('Tasks (e2e)', () => {
   let app: INestApplication<App>;
@@ -18,20 +33,20 @@ describe('Tasks (e2e)', () => {
     testImagePath = path.join(testImageDir, 'test.jpg');
 
     const minimalJPEG = Buffer.from([
-      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
-      0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43,
-      0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01,
-      0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xFF, 0xC4, 0x00, 0x14, 0x00, 0x01,
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+      0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
+      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x01,
+      0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xff, 0xc4, 0x00, 0x14, 0x00, 0x01,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0xFF, 0xC4, 0x00, 0x14, 0x10, 0x01, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xc4, 0x00, 0x14, 0x10, 0x01, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00,
-      0x7F, 0xFF, 0xD9
+      0x00, 0x00, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00,
+      0x7f, 0xff, 0xd9,
     ]);
     await fs.writeFile(testImagePath, minimalJPEG);
   });
@@ -67,7 +82,8 @@ describe('Tasks (e2e)', () => {
     if (testImagePath) {
       try {
         await fs.unlink(testImagePath);
-      } catch (error) {
+      } catch {
+        // Ignore cleanup errors
       }
     }
   });
@@ -79,27 +95,29 @@ describe('Tasks (e2e)', () => {
         .send({ imagePath: testImagePath })
         .expect(201);
 
-      expect(response.body).toHaveProperty('taskId');
-      expect(response.body).toHaveProperty('status', 'pending');
-      expect(response.body).toHaveProperty('price');
-      expect(response.body.price).toBeGreaterThanOrEqual(5);
-      expect(response.body.price).toBeLessThanOrEqual(50);
-      expect(response.body).not.toHaveProperty('images');
+      const body = response.body as TaskResponse;
+      expect(body).toHaveProperty('taskId');
+      expect(body).toHaveProperty('status', 'pending');
+      expect(body).toHaveProperty('price');
+      expect(body.price).toBeGreaterThanOrEqual(5);
+      expect(body.price).toBeLessThanOrEqual(50);
+      expect(body).not.toHaveProperty('images');
     });
 
     it('should create a task with a valid image URL', async () => {
-      const validImageUrl = 'https://via.placeholder.com/150.jpg';
-      
+      const validImageUrl = 'https://picsum.photos/200';
+
       const response = await request(app.getHttpServer())
         .post('/tasks')
         .send({ imagePath: validImageUrl })
         .expect(201);
 
-      expect(response.body).toHaveProperty('taskId');
-      expect(response.body).toHaveProperty('status', 'pending');
-      expect(response.body).toHaveProperty('price');
-      expect(response.body.price).toBeGreaterThanOrEqual(5);
-      expect(response.body.price).toBeLessThanOrEqual(50);
+      const body = response.body as TaskResponse;
+      expect(body).toHaveProperty('taskId');
+      expect(body).toHaveProperty('status', 'pending');
+      expect(body).toHaveProperty('price');
+      expect(body.price).toBeGreaterThanOrEqual(5);
+      expect(body.price).toBeLessThanOrEqual(50);
     });
 
     it('should return 400 for invalid image path', async () => {
@@ -108,16 +126,21 @@ describe('Tasks (e2e)', () => {
         .send({ imagePath: '/nonexistent/path/image.jpg' })
         .expect(400);
 
-      expect(response.body).toHaveProperty('statusCode', 400);
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 400);
     });
 
     it('should return 400 for invalid URL', async () => {
       const response = await request(app.getHttpServer())
         .post('/tasks')
-        .send({ imagePath: 'https://example.com/nonexistent-image-that-does-not-exist-12345.jpg' })
+        .send({
+          imagePath:
+            'https://example.com/nonexistent-image-that-does-not-exist-12345.jpg',
+        })
         .expect(400);
 
-      expect(response.body).toHaveProperty('statusCode', 400);
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 400);
     });
 
     it('should return 400 for non-image URL', async () => {
@@ -126,7 +149,8 @@ describe('Tasks (e2e)', () => {
         .send({ imagePath: 'https://example.com' })
         .expect(400);
 
-      expect(response.body).toHaveProperty('statusCode', 400);
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 400);
     });
 
     it('should return 400 for empty image path', async () => {
@@ -135,7 +159,8 @@ describe('Tasks (e2e)', () => {
         .send({ imagePath: '' })
         .expect(400);
 
-      expect(response.body).toHaveProperty('statusCode');
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode');
     });
 
     it('should return 400 for invalid file type', async () => {
@@ -147,7 +172,8 @@ describe('Tasks (e2e)', () => {
         .send({ imagePath: txtFilePath })
         .expect(400);
 
-      expect(response.body).toHaveProperty('statusCode', 400);
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 400);
 
       await fs.unlink(txtFilePath);
     });
@@ -160,8 +186,9 @@ describe('Tasks (e2e)', () => {
         .get(`/tasks/${fakeTaskId}`)
         .expect(404);
 
-      expect(response.body).toHaveProperty('statusCode', 404);
-      expect(response.body).toHaveProperty('message');
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 404);
+      expect(body).toHaveProperty('message');
     });
 
     it('should return task with pending status', async () => {
@@ -170,16 +197,18 @@ describe('Tasks (e2e)', () => {
         .send({ imagePath: testImagePath })
         .expect(201);
 
-      const taskId = createResponse.body.taskId;
+      const createBody = createResponse.body as TaskResponse;
+      const taskId = createBody.taskId;
 
       const getResponse = await request(app.getHttpServer())
         .get(`/tasks/${taskId}`)
         .expect(200);
 
-      expect(getResponse.body).toHaveProperty('taskId', taskId);
-      expect(getResponse.body).toHaveProperty('status', 'pending');
-      expect(getResponse.body).toHaveProperty('price');
-      expect(getResponse.body).not.toHaveProperty('images');
+      const getBody = getResponse.body as TaskResponse;
+      expect(getBody).toHaveProperty('taskId', taskId);
+      expect(getBody).toHaveProperty('status', 'pending');
+      expect(getBody).toHaveProperty('price');
+      expect(getBody).not.toHaveProperty('images');
     });
 
     it('should return task with completed status and images after processing', async () => {
@@ -188,7 +217,8 @@ describe('Tasks (e2e)', () => {
         .send({ imagePath: testImagePath })
         .expect(201);
 
-      const taskId = createResponse.body.taskId;
+      const createBody = createResponse.body as TaskResponse;
+      const taskId = createBody.taskId;
 
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -196,18 +226,92 @@ describe('Tasks (e2e)', () => {
         .get(`/tasks/${taskId}`)
         .expect(200);
 
-      expect(getResponse.body).toHaveProperty('taskId', taskId);
-      expect(['pending', 'completed', 'failed']).toContain(getResponse.body.status);
+      const getBody = getResponse.body as TaskResponse;
+      expect(getBody).toHaveProperty('taskId', taskId);
+      expect(['pending', 'completed', 'failed']).toContain(getBody.status);
 
-      if (getResponse.body.status === 'completed') {
-        expect(getResponse.body).toHaveProperty('images');
-        expect(Array.isArray(getResponse.body.images)).toBe(true);
-        if (getResponse.body.images.length > 0) {
-          expect(getResponse.body.images[0]).toHaveProperty('resolution');
-          expect(getResponse.body.images[0]).toHaveProperty('path');
+      if (getBody.status === 'completed') {
+        expect(getBody).toHaveProperty('images');
+        expect(Array.isArray(getBody.images)).toBe(true);
+        if (getBody.images && getBody.images.length > 0) {
+          expect(getBody.images[0]).toHaveProperty('resolution');
+          expect(getBody.images[0]).toHaveProperty('path');
         }
       }
     });
   });
-});
 
+  describe('POST /tasks with file upload', () => {
+    it('should create a task with uploaded file', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .attach('file', testImagePath)
+        .expect(201);
+
+      const body = response.body as TaskResponse;
+      expect(body).toHaveProperty('taskId');
+      expect(body).toHaveProperty('status', 'pending');
+      expect(body).toHaveProperty('price');
+      expect(body.price).toBeGreaterThanOrEqual(5);
+      expect(body.price).toBeLessThanOrEqual(50);
+    });
+
+    it('should return 400 when no file or imagePath is provided', async () => {
+      await request(app.getHttpServer()).post('/tasks').send({}).expect(400);
+    });
+
+    it('should return 400 when uploading non-image file', async () => {
+      const textBuffer = Buffer.from('This is not an image');
+      const tempTextFile = path.join(__dirname, '../test-images', 'test.txt');
+      await fs.writeFile(tempTextFile, textBuffer);
+
+      await request(app.getHttpServer())
+        .post('/tasks')
+        .attach('file', tempTextFile)
+        .expect(400);
+
+      await fs.unlink(tempTextFile);
+    });
+
+    it('should return 400 when using multipart/form-data without file', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .field('imagePath', testImagePath)
+        .expect(400);
+
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 400);
+      expect(body.message).toContain(
+        'File is required when using multipart/form-data',
+      );
+    });
+
+    it('should return 400 when using multipart/form-data with imagePath field', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .attach('file', testImagePath)
+        .field('imagePath', testImagePath)
+        .expect(400);
+
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 400);
+      expect(body.message).toContain(
+        'imagePath is not allowed when using multipart/form-data',
+      );
+    });
+
+    it('should return 400 when using application/json without imagePath', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .set('Content-Type', 'application/json')
+        .send({})
+        .expect(400);
+
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 400);
+      expect(body.message).toContain(
+        'imagePath is required when using application/json',
+      );
+    });
+  });
+});

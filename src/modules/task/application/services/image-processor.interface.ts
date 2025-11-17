@@ -8,6 +8,3 @@ export interface ProcessedImageResult {
 export interface IImageProcessor {
   processImage(imagePath: string): Promise<ProcessedImageResult[]>;
 }
-
-
-

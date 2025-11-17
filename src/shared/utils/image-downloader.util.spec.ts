@@ -28,8 +28,6 @@ describe('Image Downloader Utilities', () => {
   });
 
   describe('downloadImage', () => {
-    const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>;
-
     beforeEach(() => {
       jest.clearAllMocks();
       global.fetch = jest.fn();
@@ -39,7 +37,7 @@ describe('Image Downloader Utilities', () => {
 
     it('should download image from valid URL', async () => {
       const mockArrayBuffer = new ArrayBuffer(100);
-      
+
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         headers: {
@@ -50,8 +48,10 @@ describe('Image Downloader Utilities', () => {
 
       const tempFilePath = await downloadImage('https://example.com/image.jpg');
 
-      expect(tempFilePath).toMatch(/\/output\/temp\/[a-f0-9]{32}\.jpg$/);
-      expect(global.fetch).toHaveBeenCalledWith('https://example.com/image.jpg');
+      expect(tempFilePath).toMatch(/output\/temp\/[a-f0-9]{32}\.jpg$/);
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.com/image.jpg',
+      );
       expect(fs.mkdir).toHaveBeenCalled();
       expect(fs.writeFile).toHaveBeenCalled();
     });
@@ -62,13 +62,13 @@ describe('Image Downloader Utilities', () => {
         statusText: 'Not Found',
       });
 
-      await expect(downloadImage('https://example.com/nonexistent.jpg'))
-        .rejects
-        .toThrow(ImageDownloadException);
-      
-      await expect(downloadImage('https://example.com/nonexistent.jpg'))
-        .rejects
-        .toThrow('Image download failed: Not Found');
+      await expect(
+        downloadImage('https://example.com/nonexistent.jpg'),
+      ).rejects.toThrow(ImageDownloadException);
+
+      await expect(
+        downloadImage('https://example.com/nonexistent.jpg'),
+      ).rejects.toThrow('Image download failed: Not Found');
     });
 
     it('should throw ImageDownloadException for non-image content type', async () => {
@@ -79,13 +79,15 @@ describe('Image Downloader Utilities', () => {
         },
       });
 
-      await expect(downloadImage('https://example.com/page.html'))
-        .rejects
-        .toThrow(ImageDownloadException);
-      
-      await expect(downloadImage('https://example.com/page.html'))
-        .rejects
-        .toThrow('Image download failed: URL does not point to a valid image');
+      await expect(
+        downloadImage('https://example.com/page.html'),
+      ).rejects.toThrow(ImageDownloadException);
+
+      await expect(
+        downloadImage('https://example.com/page.html'),
+      ).rejects.toThrow(
+        'Image download failed: URL does not point to a valid image',
+      );
     });
 
     it('should throw ImageDownloadException for missing content-type header', async () => {
@@ -96,13 +98,13 @@ describe('Image Downloader Utilities', () => {
         },
       });
 
-      await expect(downloadImage('https://example.com/file'))
-        .rejects
-        .toThrow(ImageDownloadException);
-      
-      await expect(downloadImage('https://example.com/file'))
-        .rejects
-        .toThrow('Image download failed: URL does not point to a valid image');
+      await expect(downloadImage('https://example.com/file')).rejects.toThrow(
+        ImageDownloadException,
+      );
+
+      await expect(downloadImage('https://example.com/file')).rejects.toThrow(
+        'Image download failed: URL does not point to a valid image',
+      );
     });
   });
 
@@ -122,8 +124,9 @@ describe('Image Downloader Utilities', () => {
     it('should not throw error if file deletion fails', async () => {
       (fs.unlink as jest.Mock).mockRejectedValue(new Error('File not found'));
 
-      await expect(cleanupTempFile('/tmp/nonexistent.jpg')).resolves.not.toThrow();
+      await expect(
+        cleanupTempFile('/tmp/nonexistent.jpg'),
+      ).resolves.not.toThrow();
     });
   });
 });
-
