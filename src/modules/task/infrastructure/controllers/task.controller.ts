@@ -101,8 +101,7 @@ Creates a new task with a random price (between 5.00 and 50.00) and processes th
         imagePath: {
           type: 'string',
           description:
-            'URL or local file path (for application/json only)',
-          example: 'https://example.com/sample-image.jpg',
+            'URL or local file path (for application/json only). Example: https://picsum.photos/200',
         },
         file: {
           type: 'string',
@@ -149,7 +148,10 @@ Creates a new task with a random price (between 5.00 and 50.00) and processes th
       dto,
     );
 
-    const task = await this.createTaskUseCase.execute({ imagePath });
+    const task = await this.createTaskUseCase.execute({
+      imagePath,
+      skipValidation: isUploadedFile,
+    });
 
     this.processImageUseCase
       .execute(task.id, task.originalPath, isUploadedFile)
@@ -215,7 +217,7 @@ Creates a new task with a random price (between 5.00 and 50.00) and processes th
       );
     }
 
-    if (dto.imagePath) {
+    if (dto.imagePath && dto.imagePath.trim() !== '') {
       throw new BadRequestException(
         'imagePath is not allowed when using multipart/form-data. Use file field instead',
       );

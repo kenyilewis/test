@@ -20,7 +20,9 @@ export class CreateTaskUseCase {
   ) {}
 
   async execute(input: CreateTaskInput): Promise<Task> {
-    await this.validateImagePath(input.imagePath);
+    if (!input.skipValidation) {
+      await this.validateImagePath(input.imagePath);
+    }
 
     const now = new Date();
     const task = new Task(
