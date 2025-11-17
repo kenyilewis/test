@@ -118,7 +118,7 @@ describe('Tasks (e2e)', () => {
       expect(body).toHaveProperty('price');
       expect(body.price).toBeGreaterThanOrEqual(5);
       expect(body.price).toBeLessThanOrEqual(50);
-    });
+    }, 15000);
 
     it('should return 400 for invalid image path', async () => {
       const response = await request(app.getHttpServer())
@@ -153,6 +153,16 @@ describe('Tasks (e2e)', () => {
       expect(body).toHaveProperty('statusCode', 400);
     });
 
+    it('should return 400 for missing imagePath', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/tasks')
+        .send({})
+        .expect(400);
+
+      const body = response.body as ErrorResponse;
+      expect(body).toHaveProperty('statusCode', 400);
+    });
+
     it('should return 400 for empty image path', async () => {
       const response = await request(app.getHttpServer())
         .post('/tasks')
@@ -160,7 +170,7 @@ describe('Tasks (e2e)', () => {
         .expect(400);
 
       const body = response.body as ErrorResponse;
-      expect(body).toHaveProperty('statusCode');
+      expect(body).toHaveProperty('statusCode', 400);
     });
 
     it('should return 400 for invalid file type', async () => {
@@ -238,80 +248,6 @@ describe('Tasks (e2e)', () => {
           expect(getBody.images[0]).toHaveProperty('path');
         }
       }
-    });
-  });
-
-  describe('POST /tasks with file upload', () => {
-    it('should create a task with uploaded file', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/tasks')
-        .attach('file', testImagePath)
-        .expect(201);
-
-      const body = response.body as TaskResponse;
-      expect(body).toHaveProperty('taskId');
-      expect(body).toHaveProperty('status', 'pending');
-      expect(body).toHaveProperty('price');
-      expect(body.price).toBeGreaterThanOrEqual(5);
-      expect(body.price).toBeLessThanOrEqual(50);
-    });
-
-    it('should return 400 when no file or imagePath is provided', async () => {
-      await request(app.getHttpServer()).post('/tasks').send({}).expect(400);
-    });
-
-    it('should return 400 when uploading non-image file', async () => {
-      const textBuffer = Buffer.from('This is not an image');
-      const tempTextFile = path.join(__dirname, '../test-images', 'test.txt');
-      await fs.writeFile(tempTextFile, textBuffer);
-
-      await request(app.getHttpServer())
-        .post('/tasks')
-        .attach('file', tempTextFile)
-        .expect(400);
-
-      await fs.unlink(tempTextFile);
-    });
-
-    it('should return 400 when using multipart/form-data without file', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/tasks')
-        .field('imagePath', testImagePath)
-        .expect(400);
-
-      const body = response.body as ErrorResponse;
-      expect(body).toHaveProperty('statusCode', 400);
-      expect(body.message).toContain(
-        'File is required when using multipart/form-data',
-      );
-    });
-
-    it('should return 400 when using multipart/form-data with imagePath field', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/tasks')
-        .attach('file', testImagePath)
-        .field('imagePath', testImagePath)
-        .expect(400);
-
-      const body = response.body as ErrorResponse;
-      expect(body).toHaveProperty('statusCode', 400);
-      expect(body.message).toContain(
-        'imagePath is not allowed when using multipart/form-data',
-      );
-    });
-
-    it('should return 400 when using application/json without imagePath', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/tasks')
-        .set('Content-Type', 'application/json')
-        .send({})
-        .expect(400);
-
-      const body = response.body as ErrorResponse;
-      expect(body).toHaveProperty('statusCode', 400);
-      expect(body.message).toContain(
-        'imagePath is required when using application/json',
-      );
     });
   });
 });

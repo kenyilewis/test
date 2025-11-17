@@ -36,76 +36,35 @@ src/
 
 ## Prerequisites
 
-- Node.js (v20 or higher) - Only if running without Docker
-- MongoDB (v7 or higher) - Only if running without Docker
-- Docker and Docker Compose - For containerized deployment
-- npm or yarn - Only if running without Docker
+- Node.js (v20 or higher)
+- Docker and Docker Compose (for MongoDB)
+- npm or yarn
 
 ## Installation
 
-### Option 1: Using Docker (Recommended)
-
 1. Clone the repository:
 ```bash
 git clone https://github.com/kenyilewis/test.git
 cd test
 ```
 
-2. Build and start the application:
+2. Start MongoDB using Docker:
 ```bash
-# Production mode
-docker compose up -d --build
-
-# Development mode (with hot reload)
-docker compose -f docker-compose.dev.yml up --build
+docker compose up -d
 ```
 
-> **Note:** The `--build` flag ensures images are built/rebuilt. You can omit it on subsequent runs if you haven't changed dependencies or Dockerfiles.
+> **Note:** This will start only MongoDB in a Docker container. The application will run locally on your machine.
 
 > **Note:** If you have an older version of Docker, use `docker-compose` (with hyphen) instead of `docker compose` (with space).
 
-3. The application will be available at:
-   - API: `http://localhost:8000`
-   - Swagger: `http://localhost:8000/api/docs`
-   - MongoDB: `localhost:27017`
-
-4. To stop the containers:
-```bash
-# Production
-docker compose down
-
-# Development
-docker compose -f docker-compose.dev.yml down
-```
-
-5. To view logs:
-```bash
-# Production
-docker compose logs -f app
-
-# Development
-docker compose -f docker-compose.dev.yml logs -f app
-```
-
-### Option 2: Local Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/kenyilewis/test.git
-cd test
-```
-
-2. Install dependencies:
+3. Install dependencies:
 ```bash
 npm install
 ```
 
-3. Ensure MongoDB is running:
+4. To stop MongoDB:
 ```bash
-# Using Docker
-docker run -d -p 27017:27017 --name mongodb mongo:latest
-
-# Or use your local MongoDB instance
+docker compose down
 ```
 
 ## Configuration
@@ -126,32 +85,20 @@ OUTPUT_DIR=./output
 
 ## Running the Application
 
-### Using Docker
-
-**Production:**
-```bash
-docker compose up -d --build
-```
-
-**Development (with hot reload):**
-```bash
-docker compose -f docker-compose.dev.yml up --build
-```
-
-### Local Development
-
-**Development Mode:**
+**Development Mode (with hot reload):**
 ```bash
 npm run start:dev
 ```
-
-The server will start on `http://localhost:8000` (or the port specified in your configuration).
 
 **Production Mode:**
 ```bash
 npm run build
 npm run start:prod
 ```
+
+The server will start on `http://localhost:8000` (or the port specified in your configuration).
+
+**Note:** Make sure MongoDB is running via Docker (`docker compose up -d`) before starting the application.
 
 ## API Documentation
 
@@ -172,18 +119,17 @@ A complete Postman collection is provided in the repository: `postman-collection
 4. The collection will be imported with all test cases and examples
 
 **Features included:**
-- ✅ 5 complete test scenarios with automatic validations
+- ✅ 4 complete test scenarios with automatic validations
 - ✅ Pre-configured environment variables
 - ✅ Auto-save of `taskId` for testing workflow
 - ✅ Example responses for each endpoint
 - ✅ Test scripts to validate responses
 
 **Test cases:**
-1. **Create Task - Local Image**: Creates a task and validates response structure
-2. **Get Task - Pending State**: Queries a recently created task
-3. **Get Task - Completed State**: Queries a task after processing
-4. **Get Task - Not Found (404)**: Tests error handling
-5. **Create Task - Invalid Input (400)**: Tests input validation
+1. **Create Task**: Creates a task with image path/URL and validates response structure
+2. **Get Task Status**: Queries task status (pending/completed)
+3. **Get Task - Not Found (404)**: Tests error handling for non-existent tasks
+4. **Create Task - Invalid Input (400)**: Tests input validation
 
 **Configuration:**
 - `baseUrl`: http://localhost:8000 (change if needed)
@@ -191,11 +137,12 @@ A complete Postman collection is provided in the repository: `postman-collection
 - `lastTaskId`: Auto-populated after creating a task
 
 **Quick Start:**
-1. Start the application (Docker or local)
-2. Import the collection in Postman
-3. Run "Create Task" request
-4. Wait 2-3 seconds
-5. Run "Get Task - Completed State" to see processed images
+1. Start MongoDB: `docker compose up -d`
+2. Start the application: `npm run start:dev`
+3. Import the collection in Postman
+4. Run "Create Task" request
+5. Wait 2-3 seconds
+6. Run "Get Task Status" to see processing results
 
 **Note:** The collection uses https://picsum.photos as default image source. You can change the `imagePath` variable to use local images or different URLs.
 
@@ -205,29 +152,16 @@ A complete Postman collection is provided in the repository: `postman-collection
 
 Creates a new image processing task.
 
-The API supports **three methods** to provide the image:
+The API supports **two methods** to provide the image:
 
-#### Method 1: File Upload (Recommended for local images)
+#### Method 1: Image URL (Recommended)
 
-Upload an image file directly from your computer. **This works from any PC, even with Docker**.
-
-**cURL Example:**
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/tasks' \
-  -H 'accept: application/json' \
-  -F 'file=@/Users/kenyigalan/Downloads/IMG_1186.PNG'
-```
-
-**Form Data:**
-- `file`: Image file (multipart/form-data)
-
-#### Method 2: Image URL
+Provide a URL to an image. The API will download it and process it.
 
 **Request Body (JSON):**
 ```json
 {
-  "imagePath": "https://example.com/image.jpg"
+  "imagePath": "https://picsum.photos/2000/1500"
 }
 ```
 
@@ -242,7 +176,9 @@ curl -X 'POST' \
 }'
 ```
 
-#### Method 3: Local Path (Only when running locally, not with Docker)
+#### Method 2: Local File Path
+
+Provide a local file system path to an image.
 
 **Request Body (JSON):**
 ```json
@@ -251,7 +187,16 @@ curl -X 'POST' \
 }
 ```
 
-**Note:** This only works if the application can access the file system path (i.e., running locally without Docker).
+**cURL Example:**
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/tasks' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "imagePath": "/Users/username/Pictures/image.jpg"
+}'
+```
 
 ---
 
@@ -264,20 +209,20 @@ curl -X 'POST' \
 }
 ```
 
-**Response (400 Bad Request) - No image provided:**
+**Response (400 Bad Request) - Missing imagePath:**
 ```json
 {
   "statusCode": 400,
-  "message": "Either imagePath or file must be provided",
+  "message": "imagePath must be a string",
   "timestamp": "2024-01-01T12:00:00.000Z"
 }
 ```
 
-**Response (400 Bad Request) - Invalid image file:**
+**Response (400 Bad Request) - Invalid local path:**
 ```json
 {
   "statusCode": 400,
-  "message": "Only image files are allowed",
+  "message": "Invalid image path or URL",
   "timestamp": "2024-01-01T12:00:00.000Z"
 }
 ```
@@ -379,7 +324,7 @@ Make sure MongoDB is running before executing E2E tests:
 
 ```bash
 # Start MongoDB with Docker
-docker compose up -d mongodb
+docker compose up -d
 
 # Run E2E tests
 npm run test:e2e
@@ -389,10 +334,9 @@ E2E tests cover:
 - Complete HTTP request/response flow
 - Local file path processing
 - URL-based image processing
-- File upload (multipart/form-data)
 - Error handling (404, 400)
 - Invalid file type validation
-- Missing file/path validation
+- Missing imagePath validation
 
 ### Test Coverage
 
@@ -408,29 +352,23 @@ npm test && npm run test:integration && npm run test:e2e
 
 ## Image Processing
 
-The API processes images asynchronously and supports **three input methods**:
+The API processes images asynchronously and supports **two input methods**:
 
 ### Input Methods
 
-1. **File Upload (multipart/form-data)**: 
-   - Works with any environment (local or Docker)
-   - File is saved to `./output/temp` with a unique UUID name
-   - Automatically cleaned up after processing
-   
-2. **HTTP/HTTPS URL**: 
+1. **HTTP/HTTPS URL**: 
    - Downloads image to temporary location
    - Validates content-type is an image
    - Automatically cleaned up after processing
 
-3. **Local File Path**: 
+2. **Local File Path**: 
    - Direct access to file system
-   - Only works when application can access the path
-   - Not recommended when running with Docker (unless volumes are mounted)
+   - File must be accessible from the application's file system
+   - No cleanup needed (original file is not modified)
 
 ### Processing Flow
 
 1. **Validation**: 
-   - For file uploads: Validates MIME type during upload
    - For local paths: Validates that the file exists and is accessible
    - For URLs: Downloads the image and validates content-type is an image
    - Validates that the file is a valid image format using Sharp metadata extraction
@@ -446,7 +384,7 @@ The API processes images asynchronously and supports **three input methods**:
 
 5. **Storage**: Images are saved in the format: `/output/{original_name}/{resolution}/{md5}.{ext}`
 
-6. **Cleanup**: Temporary files (from uploads and URLs) are automatically cleaned up after processing
+6. **Cleanup**: Temporary files (from URL downloads) are automatically cleaned up after processing
 
 7. **Status Update**: The task status is updated to `completed` or `failed`
 

@@ -20,13 +20,9 @@ export class ProcessImageUseCase {
     private readonly imageProcessor: IImageProcessor,
   ) {}
 
-  async execute(
-    taskId: string,
-    imagePath: string,
-    isUploadedFile: boolean = false,
-  ): Promise<void> {
+  async execute(taskId: string, imagePath: string): Promise<void> {
     let tempFilePath: string | null = null;
-    let shouldCleanup = isUploadedFile;
+    let shouldCleanup = false;
 
     try {
       let actualImagePath = imagePath;
@@ -35,8 +31,6 @@ export class ProcessImageUseCase {
         tempFilePath = await downloadImage(imagePath);
         actualImagePath = tempFilePath;
         shouldCleanup = true;
-      } else if (isUploadedFile) {
-        tempFilePath = imagePath;
       }
 
       const processedImages =

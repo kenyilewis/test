@@ -2,7 +2,7 @@
   "info": {
     "name": "Image Processing API - Challenge",
     "_postman_id": "challenge-api-collection",
-    "description": "Complete collection to test the Image Processing REST API.\n\n**Setup:**\n1. API must be running on http://localhost:8000\n2. MongoDB must be available\n3. Import this collection into Postman\n4. Update the `imagePath` variable with a valid path\n\n**Use Cases Included:**\n- Create processing task\n- Query task status (pending/completed)\n- Error handling (404)\n- Verify random price generation",
+    "description": "Complete collection to test the Image Processing REST API.\n\n**Setup:**\n1. API must be running on http://localhost:8000\n2. MongoDB must be available (docker compose up -d)\n3. Import this collection into Postman\n4. Update the `imagePath` variable with a valid URL or local path\n\n**Use Cases Included:**\n- Create processing task with image URL or local path\n- Query task status (pending/completed)\n- Error handling (404, 400)\n- Verify random price generation (5-50)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -10,7 +10,7 @@
       "name": "Tasks",
       "item": [
         {
-          "name": "1. Create Task - Local Image",
+          "name": "1. Create Task",
           "event": [
             {
               "listen": "test",
@@ -99,96 +99,6 @@
                 }
               ],
               "body": "{\n  \"taskId\": \"65d4a54b89c5e342b2c2c5f6\",\n  \"status\": \"pending\",\n  \"price\": 25.5\n}"
-            }
-          ]
-        },
-        {
-          "name": "1B. Create Task - File Upload",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test(\"Response contains taskId\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('taskId');",
-                  "    pm.expect(jsonData.taskId).to.be.a('string');",
-                  "    ",
-                  "    pm.collectionVariables.set(\"lastTaskId\", jsonData.taskId);",
-                  "});",
-                  "",
-                  "pm.test(\"Initial status is 'pending'\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.status).to.equal('pending');",
-                  "});",
-                  "",
-                  "pm.test(\"Price is assigned between 5 and 50\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('price');",
-                  "    pm.expect(jsonData.price).to.be.at.least(5);",
-                  "    pm.expect(jsonData.price).to.be.at.most(50);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "file",
-                  "type": "file",
-                  "src": []
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseUrl}}/tasks",
-              "host": ["{{baseUrl}}"],
-              "path": ["tasks"]
-            },
-            "description": "Creates a task by uploading an image file directly.\n\n**Input:**\n- `file`: Image file (multipart/form-data)\n\n**Output:**\n- `taskId`: Unique task ID\n- `status`: Initial status (pending)\n- `price`: Random price between 5 and 50\n\n**Note:** This method works with Docker. Select a file from your computer using Postman's file picker."
-          },
-          "response": [
-            {
-              "name": "Success response",
-              "originalRequest": {
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "file",
-                      "type": "file",
-                      "src": []
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/tasks",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["tasks"]
-                }
-              },
-              "status": "Created",
-              "code": 201,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"taskId\": \"65d4a54b89c5e342b2c2c5f6\",\n  \"status\": \"pending\",\n  \"price\": 32.75\n}"
             }
           ]
         },

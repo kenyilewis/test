@@ -9,8 +9,6 @@ services:
       MONGO_INITDB_DATABASE: kratos
     volumes:
       - mongodb_data:/data/db
-    networks:
-      - challenge-network
     command: mongod --quiet
     healthcheck:
       test: mongosh --eval "db.adminCommand('ping')" --quiet
@@ -18,37 +16,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: challenge-app
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      NODE_ENV: production
-      PORT: 8000
-      MONGODB_URI: mongodb://mongodb:27017/kratos
-      OUTPUT_DIR: /app/output
-    volumes:
-      - ./output:/app/output
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    networks:
-      - challenge-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/docs"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-networks:
-  challenge-network:
-    driver: bridge
 
 volumes:
   mongodb_data:
